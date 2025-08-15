@@ -6,6 +6,7 @@ A high-performance C library implementing "Kraut Strings" - a specialized string
 
 - **16-byte Fixed Size**: All string representations fit exactly in 128 bits for optimal register-based function calls
 - **Dual Storage Modes**: Short strings (≤12 chars) stored inline, long strings use prefix + pointer optimization
+- **Character Encoding Support**: UTF-8, UTF-16LE, UTF-16BE, and ANSI encodings with 2-bit encoding storage
 - **High Performance**: 33% memory savings vs traditional string representations, 4 instructions vs 37 for comparisons
 - **Immutable Design**: Strings cannot be modified after creation for thread safety and optimization
 - **Prefix Optimization**: First 4 characters stored inline for lightning-fast comparisons
@@ -32,14 +33,23 @@ cmake --build _build
 ```c
 #include "KString.h"
 
-// Create strings
+// Create strings (UTF-8 by default)
 KString str1 = KStringCreate("Hello", 5);
 KString str2 = KStringCreateFromCStr("World!");
+
+// Create strings with explicit encoding
+KString utf16str = KStringCreateWithEncoding("UTF-16", 6, KSTRING_ENCODING_UTF16LE);
+KString ansistr = KStringCreateWithEncoding("ANSI", 4, KSTRING_ENCODING_ANSI);
 
 // String operations
 KString result = KStringConcat(str1, str2);
 bool isEqual = KStringEquals(str1, str2);
 size_t length = KStringSize(str1);
+KStringEncoding encoding = KStringGetEncoding(str1);
+
+// Encoding conversion
+KString utf16converted = KStringConvertUtf8ToUtf16Le(str1);
+KString ansiconverted = KStringConvertUtf8ToAnsi(str1);
 
 // Comparison
 int cmp = KStringCompare(str1, str2);
@@ -47,6 +57,8 @@ bool startsWith = KStringStartsWith(result, str1);
 
 // Memory cleanup (only for temporary strings)
 KStringDestroy(result);
+KStringDestroy(utf16converted);
+KStringDestroy(ansiconverted);
 ```
 
 ## 📊 Performance Benefits
@@ -66,11 +78,19 @@ Based on German String research from Umbra/CedarDB:
 
 1. **16-byte Fixed Size**: Entire string representation fits in 128 bits
 2. **Two Storage Modes**:
-   - **Short strings (≤12 chars)**: 32-bit size + 96-bit inline content
-   - **Long strings (>12 chars)**: 32-bit size + 32-bit prefix + 2-bit storage class + 62-bit pointer
-3. **Immutable Strings**: No modification after creation
-4. **Prefix Optimization**: First 4 characters stored inline for fast comparisons
-5. **Register Passing**: 16-byte limit enables CPU register-based function calls
+   - **Short strings (≤12 chars)**: 30-bit size + 2-bit encoding + 96-bit inline content
+   - **Long strings (>12 chars)**: 30-bit size + 2-bit encoding + 32-bit prefix + 2-bit storage class + 62-bit pointer
+3. **Character Encoding**: 2-bit encoding field supports UTF-8, UTF-16LE, UTF-16BE, and ANSI
+4. **Immutable Strings**: No modification after creation
+5. **Prefix Optimization**: First 4 characters stored inline for fast comparisons
+6. **Register Passing**: 16-byte limit enables CPU register-based function calls
+
+### Character Encodings
+
+- **`KSTRING_ENCODING_UTF8`**: UTF-8 Unicode encoding (default)
+- **`KSTRING_ENCODING_UTF16LE`**: UTF-16 Little Endian
+- **`KSTRING_ENCODING_UTF16BE`**: UTF-16 Big Endian
+- **`KSTRING_ENCODING_ANSI`**: ANSI/Windows-1252 (legacy Windows compatibility)
 
 ### Storage Classes (Long Strings)
 
@@ -88,6 +108,11 @@ KString KStringCreate(const char* pStr, const size_t Size);
 KString KStringCreatePersistent(const char* pStr, const size_t Size);
 KString KStringCreateTransient(const char* pStr, const size_t Size);
 
+// Encoding-aware string creation
+KString KStringCreateWithEncoding(const char* pStr, const size_t Size, const KStringEncoding Encoding);
+KString KStringCreatePersistentWithEncoding(const char* pStr, const size_t Size, const KStringEncoding Encoding);
+KString KStringCreateTransientWithEncoding(const char* pStr, const size_t Size, const KStringEncoding Encoding);
+
 // Convenience functions (less secure)
 KString KStringCreateFromCStr(const char* pStr);
 KString KStringCreatePersistentFromCStr(const char* pStr);
@@ -102,6 +127,7 @@ void KStringDestroy(const KString Str);
 // Get string properties
 const char* KStringCStr(const KString Str);
 size_t KStringSize(const KString Str);
+KStringEncoding KStringGetEncoding(const KString Str);
 bool KStringIsShort(const KString Str);
 bool KStringIsValid(const KString Str);
 ```
@@ -129,6 +155,29 @@ KString KStringSubstring(const KString Str, const size_t Offset, const size_t Si
 
 // Error handling
 KString KStringInvalid(void);
+```
+
+### Encoding Conversion Operations
+
+```c
+// Convert string to different encoding
+KString KStringConvertToEncoding(const KString Str, const KStringEncoding TargetEncoding);
+
+// UTF-8 <-> UTF-16LE conversion
+KString KStringConvertUtf8ToUtf16Le(const KString Str);
+KString KStringConvertUtf16LeToUtf8(const KString Str);
+
+// UTF-8 <-> UTF-16BE conversion
+KString KStringConvertUtf8ToUtf16Be(const KString Str);
+KString KStringConvertUtf16BeToUtf8(const KString Str);
+
+// UTF-16LE <-> UTF-16BE conversion
+KString KStringConvertUtf16LeToUtf16Be(const KString Str);
+KString KStringConvertUtf16BeToUtf16Le(const KString Str);
+
+// UTF-8 <-> ANSI conversion (Windows-1252)
+KString KStringConvertUtf8ToAnsi(const KString Str);
+KString KStringConvertAnsiToUtf8(const KString Str);
 ```
 
 ## 🎯 Use Cases
@@ -236,10 +285,10 @@ This project implements research from the database community. Please refer to th
 
 ## 🔗 Research References
 
-- **Umbra Database System**: Original German String implementation
-- **CedarDB**: Commercial database using German String optimizations
-- **Christian Winter**: "A Deep Dive into German Strings"
-- **Lukas Vogel**: "Why German Strings are Everywhere"
+- **Thomas Neumann, Michael Freitag**: ["Umbra: A Disk-Based System with In-Memory Performance"](https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf) - Technische Universität München - Original German String implementation in Umbra database system
+- **Christian Winter**: ["A Deep Dive into German Strings"](https://cedardb.com/blog/strings_deep_dive/) - CedarDB blog post with detailed implementation insights
+- **Lukas Vogel**: ["Why German Strings are Everywhere"](https://cedardb.com/blog/german_strings/#short-string-representation) - CedarDB blog post explaining the widespread adoption and advantages of German Strings
+- **CedarDB**: Commercial database system using German String optimizations in production
 
 ## 🙏 Acknowledgments
 

@@ -18,6 +18,20 @@ extern "C" {
 // Maximum length for short strings (stored inline)
 #define KSTRING_MAX_SHORT_LENGTH 12
 
+    // Character encoding types (stored in upper 2 bits of Size field)
+    typedef enum
+    {
+        KSTRING_ENCODING_UTF8    = 0, // Default UTF-8 encoding
+        KSTRING_ENCODING_UTF16LE = 1, // UTF-16 Little Endian
+        KSTRING_ENCODING_UTF16BE = 2, // UTF-16 Big Endian
+        KSTRING_ENCODING_ANSI    = 3  // ANSI/Windows-1252 (legacy Windows)
+    } KStringEncoding;
+
+// Bit masks for Size field (32 bits total)
+#define KSTRING_SIZE_MASK         0x3FFF'FFFF  // 30-bit size mask (max ~1GB)
+#define KSTRING_ENCODING_MASK     0xC000'0000  // 2-bit encoding mask
+#define KSTRING_ENCODING_SHIFT    30
+
     // Storage classes for long strings
     typedef enum
     {
@@ -32,7 +46,7 @@ extern "C" {
 
     typedef struct KString
     {
-        uint32_t Size; // Internal: 32-bit size (max 4GB) to fit in 16 bytes
+        uint32_t Size; // 30-bit size (max ~1GB) + 2-bit encoding in upper bits
 
         // Union must be exactly 12 bytes to total 16 bytes
         union
@@ -63,6 +77,11 @@ extern "C" {
     KString KStringCreatePersistent(const char* pStr, const size_t Size);
     KString KStringCreateTransient(const char* pStr, const size_t Size);
 
+    // Create KString with explicit encoding
+    KString KStringCreateWithEncoding(const char* pStr, const size_t Size, const KStringEncoding Encoding);
+    KString KStringCreatePersistentWithEncoding(const char* pStr, const size_t Size, const KStringEncoding Encoding);
+    KString KStringCreateTransientWithEncoding(const char* pStr, const size_t Size, const KStringEncoding Encoding);
+
     // Convenience functions for null-terminated strings (less secure, use with caution)
     KString KStringCreateFromCStr(const char* pStr);
     KString KStringCreatePersistentFromCStr(const char* pStr);
@@ -77,8 +96,11 @@ extern "C" {
     // Get C-string representation (may allocate for short strings)
     const char* KStringCStr(const KString Str);
 
-    // Get size (always fast - O(1))
+    // Get size in bytes (always fast - O(1))
     size_t KStringSize(const KString Str);
+
+    // Get character encoding
+    KStringEncoding KStringGetEncoding(const KString Str);
 
     // Check if string is stored inline
     bool KStringIsShort(const KString Str);
@@ -110,6 +132,29 @@ extern "C" {
 
     // Extract substring
     KString KStringSubstring(const KString Str, const size_t Offset, const size_t Size);
+
+    //
+    // Encoding Conversion Operations
+    //
+
+    // Convert string to different encoding (creates new string)
+    KString KStringConvertToEncoding(const KString Str, const KStringEncoding TargetEncoding);
+
+    // UTF-8 <-> UTF-16LE conversion
+    KString KStringConvertUtf8ToUtf16Le(const KString Str);
+    KString KStringConvertUtf16LeToUtf8(const KString Str);
+
+    // UTF-8 <-> UTF-16BE conversion
+    KString KStringConvertUtf8ToUtf16Be(const KString Str);
+    KString KStringConvertUtf16BeToUtf8(const KString Str);
+
+    // UTF-16LE <-> UTF-16BE conversion
+    KString KStringConvertUtf16LeToUtf16Be(const KString Str);
+    KString KStringConvertUtf16BeToUtf16Le(const KString Str);
+
+    // UTF-8 <-> ANSI conversion (Windows-1252)
+    KString KStringConvertUtf8ToAnsi(const KString Str);
+    KString KStringConvertAnsiToUtf8(const KString Str);
 
     //
     // Error Handling

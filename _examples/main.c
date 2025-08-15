@@ -2,6 +2,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Helper function to get encoding name for display
+const char* GetEncodingName(KStringEncoding Encoding)
+{
+    switch (Encoding)
+    {
+        case KSTRING_ENCODING_UTF8:
+            return "UTF-8";
+        case KSTRING_ENCODING_UTF16LE:
+            return "UTF-16LE";
+        case KSTRING_ENCODING_UTF16BE:
+            return "UTF-16BE";
+        case KSTRING_ENCODING_ANSI:
+            return "ANSI";
+        default:
+            return "Unknown";
+    }
+}
+
 int main(void)
 {
     printf("KString Library Demo - Kraut Strings\n");
@@ -77,8 +95,60 @@ int main(void)
         "Case-insensitive starts with: \"%s\" starts with \"%s\"? %s\n", KStringCStr(Mixed), KStringCStr(UpperPrefix),
         KStringStartsWithIgnoreCase(Mixed, UpperPrefix) ? "Yes" : "No");
 
-    // Test 7: Memory cleanup
-    printf("\n7. Memory Cleanup\n");
+    // Test 7: Character Encoding Support
+    printf("\n7. Character Encoding Support\n");
+    printf("------------------------------\n");
+
+    // Create strings with different encodings
+    KString Utf8Str    = KStringCreateWithEncoding("UTF-8 Text", 10, KSTRING_ENCODING_UTF8);
+    KString Utf16LeStr = KStringCreateWithEncoding("UTF-16LE", 8, KSTRING_ENCODING_UTF16LE);
+    KString Utf16BeStr = KStringCreateWithEncoding("UTF-16BE", 8, KSTRING_ENCODING_UTF16BE);
+    KString AnsiStr    = KStringCreateWithEncoding("ANSI Text", 9, KSTRING_ENCODING_ANSI);
+
+    printf("UTF-8 string: \"%s\" (encoding: %s)\n", KStringCStr(Utf8Str), GetEncodingName(KStringGetEncoding(Utf8Str)));
+    printf("UTF-16LE string: \"%s\" (encoding: %s)\n", KStringCStr(Utf16LeStr), GetEncodingName(KStringGetEncoding(Utf16LeStr)));
+    printf("UTF-16BE string: \"%s\" (encoding: %s)\n", KStringCStr(Utf16BeStr), GetEncodingName(KStringGetEncoding(Utf16BeStr)));
+    printf("ANSI string: \"%s\" (encoding: %s)\n", KStringCStr(AnsiStr), GetEncodingName(KStringGetEncoding(AnsiStr)));
+
+    // Test encoding preservation in operations
+    KString ConcatEncoded = KStringConcat(Utf8Str, Utf16LeStr);
+    printf("Concatenated string encoding: %s (inherits from first string)\n", GetEncodingName(KStringGetEncoding(ConcatEncoded)));
+
+    // Test 8: Encoding Conversion
+    printf("\n8. Encoding Conversion\n");
+    printf("----------------------\n");
+
+    // Test UTF-8 conversions
+    KString TestUtf8 = KStringCreateWithEncoding("Hello World! ??", 16, KSTRING_ENCODING_UTF8);
+    printf(
+        "Original UTF-8: \"%s\" (encoding: %s, size: %zu bytes)\n", KStringCStr(TestUtf8), GetEncodingName(KStringGetEncoding(TestUtf8)),
+        KStringSize(TestUtf8));
+
+    // Convert UTF-8 to UTF-16LE
+    KString ConvertedUtf16Le = KStringConvertUtf8ToUtf16Le(TestUtf8);
+    printf("Converted to UTF-16LE: (encoding: %s, size: %zu bytes)\n", GetEncodingName(KStringGetEncoding(ConvertedUtf16Le)), KStringSize(ConvertedUtf16Le));
+
+    // Convert UTF-8 to UTF-16BE
+    KString ConvertedUtf16Be = KStringConvertUtf8ToUtf16Be(TestUtf8);
+    printf("Converted to UTF-16BE: (encoding: %s, size: %zu bytes)\n", GetEncodingName(KStringGetEncoding(ConvertedUtf16Be)), KStringSize(ConvertedUtf16Be));
+
+    // Convert UTF-8 to ANSI
+    KString ConvertedAnsi = KStringConvertUtf8ToAnsi(TestUtf8);
+    printf(
+        "Converted to ANSI: \"%s\" (encoding: %s, size: %zu bytes)\n", KStringCStr(ConvertedAnsi), GetEncodingName(KStringGetEncoding(ConvertedAnsi)),
+        KStringSize(ConvertedAnsi));
+
+    // Test round-trip conversion UTF-8 -> UTF-16LE -> UTF-8
+    KString RoundTripUtf8 = KStringConvertUtf16LeToUtf8(ConvertedUtf16Le);
+    printf("Round-trip UTF-8->UTF-16LE->UTF-8: \"%s\" (encoding: %s)\n", KStringCStr(RoundTripUtf8), GetEncodingName(KStringGetEncoding(RoundTripUtf8)));
+
+    // Test byte order conversion UTF-16LE <-> UTF-16BE
+    KString SwappedUtf16Be = KStringConvertUtf16LeToUtf16Be(ConvertedUtf16Le);
+    KString SwappedUtf16Le = KStringConvertUtf16BeToUtf16Le(SwappedUtf16Be);
+    printf("UTF-16 byte order conversion successful: %s\n", (KStringGetEncoding(SwappedUtf16Le) == KSTRING_ENCODING_UTF16LE) ? "Yes" : "No");
+
+    // Test 9: Memory Cleanup
+    printf("\n8. Memory Cleanup\n");
     printf("-----------------\n");
 
     KStringDestroy(ShortStr);
@@ -98,6 +168,18 @@ int main(void)
     KStringDestroy(Lower);
     KStringDestroy(Mixed);
     KStringDestroy(UpperPrefix);
+    KStringDestroy(Utf8Str);
+    KStringDestroy(Utf16LeStr);
+    KStringDestroy(Utf16BeStr);
+    KStringDestroy(AnsiStr);
+    KStringDestroy(ConcatEncoded);
+    KStringDestroy(TestUtf8);
+    KStringDestroy(ConvertedUtf16Le);
+    KStringDestroy(ConvertedUtf16Be);
+    KStringDestroy(ConvertedAnsi);
+    KStringDestroy(RoundTripUtf8);
+    KStringDestroy(SwappedUtf16Be);
+    KStringDestroy(SwappedUtf16Le);
 
     printf("All strings cleaned up successfully.\n");
 
