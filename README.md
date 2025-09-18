@@ -1,8 +1,8 @@
-# KString Library - Kraut Strings 🥨
+# KString Library - Kraut Strings
 
 A high-performance C library implementing "Kraut Strings" - a specialized string format based on the "German String" research from Umbra database system and CedarDB. KString provides a 16-byte fixed-size string representation optimized for database-like performance characteristics.
 
-## ✨ Features
+## Features
 
 - **16-byte Fixed Size**: All string representations fit exactly in 128 bits for optimal register-based function calls
 - **Dual Storage Modes**: Short strings (≤12 chars) stored inline, long strings use prefix + pointer optimization
@@ -13,7 +13,7 @@ A high-performance C library implementing "Kraut Strings" - a specialized string
 - **Complete Const Correctness**: All input parameters protected from accidental modification
 - **Cross-Platform**: Supports Linux, macOS, and Windows with CMake build system
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Building the Library
 
@@ -61,7 +61,7 @@ KStringDestroy(utf16converted);
 KStringDestroy(ansiconverted);
 ```
 
-## 📊 Performance Benefits
+## Performance Benefits
 
 Based on German String research from Umbra/CedarDB:
 
@@ -72,7 +72,7 @@ Based on German String research from Umbra/CedarDB:
 | Comparison Speed | Full scan | Prefix-optimized | **Early exit** |
 | Cache Performance | Poor | Excellent | **Better locality** |
 
-## 🏗️ Architecture
+## Architecture
 
 ### Core Design Principles
 
@@ -98,7 +98,7 @@ Based on German String research from Umbra/CedarDB:
 - **`KSTRING_TRANSIENT`**: Temporarily valid (may become invalid)
 - **`KSTRING_TEMPORARY`**: Created during execution (requires cleanup)
 
-## 📚 API Reference
+## API Reference
 
 ### Core Operations
 
@@ -180,7 +180,7 @@ KString KStringConvertUtf8ToAnsi(const KString Str);
 KString KStringConvertAnsiToUtf8(const KString Str);
 ```
 
-## 🎯 Use Cases
+## Use Cases
 
 Perfect for applications requiring:
 
@@ -191,7 +191,7 @@ Perfect for applications requiring:
 - **Embedded Systems**: Predictable memory usage with fixed-size strings
 - **Scientific Computing**: Optimized string operations for data processing
 
-## 🔬 Research Background
+## Research Background
 
 KString implements the "German String" format from database research:
 
@@ -209,7 +209,7 @@ KString implements the "German String" format from database research:
 - **Trade-off**: String modification is expensive (requires reallocation)
 - **Limitation**: Maximum string size 4GB (32-bit size field)
 
-## 🛠️ Build Requirements
+## Build Requirements
 
 - **CMake 4.0+**: Modern CMake configuration
 - **C23 Compiler**: GCC, Clang, or MSVC with C23 support
@@ -223,7 +223,7 @@ KString implements the "German String" format from database research:
 | macOS | `libkstring.dylib` | `libkstring_static.a` | ✅ Tested |
 | Windows | `kstring.dll` | `kstring_static.lib` | ✅ Supported |
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 KString/
@@ -240,7 +240,7 @@ KString/
 └── README.md               # This file
 ```
 
-## 🎨 Example Program
+## Example Program
 
 The included demo showcases all major features:
 
@@ -268,29 +268,18 @@ Long string: "This is a longer string that exceeds 12 characters" (length: 50, i
    16-byte fixed size, optimized for performance
 ```
 
-## 🤝 Contributing
-
-We welcome contributions! Key areas for enhancement:
-
-- Unicode/UTF-8 support for proper international character handling
-- String interning for memory efficiency
-- Copy-on-write semantics
-- Custom allocators
-- SIMD optimizations for string operations
-- Integration with popular C frameworks
-
-## 📄 License
+## License
 
 This project implements research from the database community. Please refer to the original German String papers for academic citations.
 
-## 🔗 Research References
+## Research References
 
 - **Thomas Neumann, Michael Freitag**: ["Umbra: A Disk-Based System with In-Memory Performance"](https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf) - Technische Universität München - Original German String implementation in Umbra database system
 - **Christian Winter**: ["A Deep Dive into German Strings"](https://cedardb.com/blog/strings_deep_dive/) - CedarDB blog post with detailed implementation insights
 - **Lukas Vogel**: ["Why German Strings are Everywhere"](https://cedardb.com/blog/german_strings/#short-string-representation) - CedarDB blog post explaining the widespread adoption and advantages of German Strings
 - **CedarDB**: Commercial database system using German String optimizations in production
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 **Research Credit**: All performance benefits and design decisions are based on the original German String research from Umbra database system and CedarDB. "Kraut Strings" is simply our branding of this proven technology.
 
@@ -298,4 +287,4 @@ This project implements research from the database community. Please refer to th
 
 ---
 
-**KString - Bringing database-grade string performance to C applications** 🚀
+**KString - Bringing database-grade string performance to C applications**
