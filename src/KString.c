@@ -25,7 +25,7 @@
 
 // Allocate aligned memory using calloc (private function)
 // Rounds up Size to next 8-byte boundary for optimal memory access
-inline static void* KStringAlloc(size_t Size)
+inline static void* KS_Alloc(size_t Size)
 {
     if (0 == Size)
     {
@@ -39,52 +39,73 @@ inline static void* KStringAlloc(size_t Size)
     return calloc(1, AlignedSize);
 }
 
+// Free memory and set pointer to NULL (private function)
+// Takes a pointer to a pointer for safe memory release
+inline static void KS_Release(void** ppPtr)
+{
+    if (NULL != ppPtr && NULL != *ppPtr)
+    {
+        free(*ppPtr);
+        *ppPtr = NULL;
+    }
+}
+
 //
 // Private Helper Functions
 //
 
 // Check if string length qualifies for short representation
-inline static bool IsShortString(size_t Size)
+inline static bool KS_IsShortString(size_t Size)
 {
     return Size <= KSTRING_MAX_SHORT_LENGTH;
 }
 
 // Extract storage class from tagged pointer
-inline static KStringStorageClass GetStorageClass(uint64_t PtrAndClass)
+inline static KStringStorageClass KS_GetStorageClass(uint64_t PtrAndClass)
 {
     return (KStringStorageClass)((PtrAndClass & KSTRING_CLASS_MASK) >> KSTRING_CLASS_SHIFT);
 }
 
 // Extract pointer from tagged pointer
-inline static void* GetPointer(uint64_t PtrAndClass)
+inline static void* KS_GetPointer(uint64_t PtrAndClass)
 {
     return (void*)(PtrAndClass & KSTRING_PTR_MASK);
 }
 
 // Create tagged pointer with storage class
-inline static uint64_t CreateTaggedPointer(void* pPointer, KStringStorageClass StorageClass)
+inline static uint64_t KS_CreateTaggedPointer(void* pPointer, KStringStorageClass StorageClass)
 {
-    uint64_t Ptr   = (uint64_t)pPointer;
+    uint64_t Ptr = (uint64_t)pPointer;
+
+    // Validate that pointer fits in 62-bit space (security check)
+    if ((Ptr & ~KSTRING_PTR_MASK) != 0)
+    {
+        // Pointer has bits set in the upper 2 bits, which would be corrupted
+        // This is a critical error that should not happen in normal operation
+        return 0; // Return invalid tagged pointer
+    }
+
     uint64_t Class = ((uint64_t)StorageClass) << KSTRING_CLASS_SHIFT;
     return (Ptr & KSTRING_PTR_MASK) | Class;
 }
 
 // Extract size from Size field (30 bits)
-inline static size_t GetSizeFromField(uint32_t SizeField)
+inline static size_t KS_GetSizeFromField(uint32_t SizeField)
 {
     return (size_t)(SizeField & KSTRING_SIZE_MASK);
 }
 
 // Extract encoding from Size field (upper 2 bits)
-inline static KStringEncoding GetEncodingFromField(uint32_t SizeField)
+inline static KStringEncoding KS_GetEncodingFromField(uint32_t SizeField)
 {
     return (KStringEncoding)((SizeField & KSTRING_ENCODING_MASK) >> KSTRING_ENCODING_SHIFT);
 }
 
 // Create Size field with size and encoding
-inline static uint32_t CreateSizeField(size_t Size, KStringEncoding Encoding)
+inline static uint32_t KS_CreateSizeField(size_t Size, KStringEncoding Encoding)
 {
-    if (Size > KSTRING_SIZE_MASK)
+    // Enhanced size validation to prevent truncation and overflow
+    if (Size > KSTRING_SIZE_MASK || Size > UINT32_MAX)
     {
         return KSTRING_INVALID_LENGTH; // Size too large
     }
@@ -112,14 +133,14 @@ KString KStringCreateWithEncoding(const char* pStr, const size_t Size, const KSt
     }
 
     KString Result;
-    Result.Size = CreateSizeField(Size, Encoding);
+    Result.Size = KS_CreateSizeField(Size, Encoding);
 
     if (KSTRING_INVALID_LENGTH == Result.Size)
     {
         return KStringInvalid();
     }
 
-    if (IsShortString(Size))
+    if (KS_IsShortString(Size))
     {
         // Short string: store inline
         memcpy(Result.Content, pStr, Size);
@@ -132,7 +153,7 @@ KString KStringCreateWithEncoding(const char* pStr, const size_t Size, const KSt
     else
     {
         // Long string: allocate memory and store prefix
-        char* pData = KStringAlloc(Size + 1); // +1 for null terminator, zero-initialized
+        char* pData = KS_Alloc(Size + 1); // +1 for null terminator, zero-initialized
         if (NULL == pData)
         {
             return KStringInvalid();
@@ -141,11 +162,23 @@ KString KStringCreateWithEncoding(const char* pStr, const size_t Size, const KSt
         memcpy(pData, pStr, Size);
         pData[Size] = '\0';
 
-        // Store first 4 characters as prefix
-        memcpy(Result.LongStr.Prefix, pStr, 4);
+        // Store first 4 characters as prefix (safe copy with bounds checking)
+        size_t PrefixSize = (Size >= 4) ? 4 : Size;
+        memcpy(Result.LongStr.Prefix, pStr, PrefixSize);
+        if (PrefixSize < 4)
+        {
+            memset(Result.LongStr.Prefix + PrefixSize, 0, 4 - PrefixSize);
+        }
 
         // Create tagged pointer with TEMPORARY storage class
-        Result.LongStr.PtrAndClass = CreateTaggedPointer(pData, KSTRING_TEMPORARY);
+        Result.LongStr.PtrAndClass = KS_CreateTaggedPointer(pData, KSTRING_TEMPORARY);
+
+        // Validate tagged pointer creation (security check)
+        if (0 == Result.LongStr.PtrAndClass)
+        {
+            KS_Release((void**)&pData);
+            return KStringInvalid();
+        }
     }
 
     return Result;
@@ -165,14 +198,14 @@ KString KStringCreatePersistentWithEncoding(const char* pStr, const size_t Size,
     }
 
     KString Result;
-    Result.Size = CreateSizeField(Size, Encoding);
+    Result.Size = KS_CreateSizeField(Size, Encoding);
 
     if (KSTRING_INVALID_LENGTH == Result.Size)
     {
         return KStringInvalid();
     }
 
-    if (IsShortString(Size))
+    if (KS_IsShortString(Size))
     {
         // Short strings are always persistent (no pointer needed)
         memcpy(Result.Content, pStr, Size);
@@ -184,8 +217,14 @@ KString KStringCreatePersistentWithEncoding(const char* pStr, const size_t Size,
     else
     {
         // Long persistent string: point directly to source (no allocation)
-        memcpy(Result.LongStr.Prefix, pStr, 4);
-        Result.LongStr.PtrAndClass = CreateTaggedPointer((void*)pStr, KSTRING_PERSISTENT);
+        // Store first 4 characters as prefix (safe copy with bounds checking)
+        size_t PrefixSize = (Size >= 4) ? 4 : Size;
+        memcpy(Result.LongStr.Prefix, pStr, PrefixSize);
+        if (PrefixSize < 4)
+        {
+            memset(Result.LongStr.Prefix + PrefixSize, 0, 4 - PrefixSize);
+        }
+        Result.LongStr.PtrAndClass = KS_CreateTaggedPointer((void*)pStr, KSTRING_PERSISTENT);
     }
 
     return Result;
@@ -205,14 +244,14 @@ KString KStringCreateTransientWithEncoding(const char* pStr, const size_t Size, 
     }
 
     KString Result;
-    Result.Size = CreateSizeField(Size, Encoding);
+    Result.Size = KS_CreateSizeField(Size, Encoding);
 
     if (KSTRING_INVALID_LENGTH == Result.Size)
     {
         return KStringInvalid();
     }
 
-    if (IsShortString(Size))
+    if (KS_IsShortString(Size))
     {
         // Short string: copy inline
         memcpy(Result.Content, pStr, Size);
@@ -224,8 +263,14 @@ KString KStringCreateTransientWithEncoding(const char* pStr, const size_t Size, 
     else
     {
         // Long transient string: point directly to source
-        memcpy(Result.LongStr.Prefix, pStr, 4);
-        Result.LongStr.PtrAndClass = CreateTaggedPointer((void*)pStr, KSTRING_TRANSIENT);
+        // Store first 4 characters as prefix (safe copy with bounds checking)
+        size_t PrefixSize = (Size >= 4) ? 4 : Size;
+        memcpy(Result.LongStr.Prefix, pStr, PrefixSize);
+        if (PrefixSize < 4)
+        {
+            memset(Result.LongStr.Prefix + PrefixSize, 0, 4 - PrefixSize);
+        }
+        Result.LongStr.PtrAndClass = KS_CreateTaggedPointer((void*)pStr, KSTRING_TRANSIENT);
     }
 
     return Result;
@@ -262,11 +307,11 @@ void KStringDestroy(const KString Str)
     // Only temporary long strings need cleanup
     if (false == KStringIsShort(Str))
     {
-        KStringStorageClass StorageClass = GetStorageClass(Str.LongStr.PtrAndClass);
+        KStringStorageClass StorageClass = KS_GetStorageClass(Str.LongStr.PtrAndClass);
         if (KSTRING_TEMPORARY == StorageClass)
         {
-            void* pData = GetPointer(Str.LongStr.PtrAndClass);
-            free(pData);
+            void* pData = KS_GetPointer(Str.LongStr.PtrAndClass);
+            KS_Release((void**)&pData);
         }
     }
 }
@@ -292,7 +337,7 @@ const char* KStringCStr(const KString Str)
         char* Buffer = ShortBuffers[BufferIndex];
         BufferIndex  = (BufferIndex + 1) % 4;
 
-        size_t Size = GetSizeFromField(Str.Size);
+        size_t Size = KS_GetSizeFromField(Str.Size);
         memcpy(Buffer, Str.Content, Size);
         Buffer[Size] = '\0';
         return Buffer;
@@ -300,23 +345,23 @@ const char* KStringCStr(const KString Str)
     else
     {
         // Long strings are already null-terminated
-        return (const char*)GetPointer(Str.LongStr.PtrAndClass);
+        return (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
     }
 }
 
 size_t KStringSize(const KString Str)
 {
-    return KStringIsValid(Str) ? GetSizeFromField(Str.Size) : 0;
+    return KStringIsValid(Str) ? KS_GetSizeFromField(Str.Size) : 0;
 }
 
 KStringEncoding KStringGetEncoding(const KString Str)
 {
-    return KStringIsValid(Str) ? GetEncodingFromField(Str.Size) : KSTRING_ENCODING_UTF8;
+    return KStringIsValid(Str) ? KS_GetEncodingFromField(Str.Size) : KSTRING_ENCODING_UTF8;
 }
 
 bool KStringIsShort(const KString Str)
 {
-    return IsShortString(GetSizeFromField(Str.Size));
+    return KS_IsShortString(KS_GetSizeFromField(Str.Size));
 }
 
 //
@@ -326,8 +371,8 @@ bool KStringIsShort(const KString Str)
 int KStringCompare(const KString StrA, const KString StrB)
 {
     // Extract actual sizes for comparison
-    size_t SizeA = GetSizeFromField(StrA.Size);
-    size_t SizeB = GetSizeFromField(StrB.Size);
+    size_t SizeA = KS_GetSizeFromField(StrA.Size);
+    size_t SizeB = KS_GetSizeFromField(StrB.Size);
 
     // Fast path: compare lengths first
     if (SizeA != SizeB)
@@ -344,8 +389,8 @@ int KStringCompare(const KString StrA, const KString StrB)
     else if (true == KStringIsShort(StrA) || true == KStringIsShort(StrB))
     {
         // One short, one long: get actual data
-        const char* pDataA = (true == KStringIsShort(StrA)) ? StrA.Content : (const char*)GetPointer(StrA.LongStr.PtrAndClass);
-        const char* pDataB = (true == KStringIsShort(StrB)) ? StrB.Content : (const char*)GetPointer(StrB.LongStr.PtrAndClass);
+        const char* pDataA = (true == KStringIsShort(StrA)) ? StrA.Content : (const char*)KS_GetPointer(StrA.LongStr.PtrAndClass);
+        const char* pDataB = (true == KStringIsShort(StrB)) ? StrB.Content : (const char*)KS_GetPointer(StrB.LongStr.PtrAndClass);
         return memcmp(pDataA, pDataB, SizeA);
     }
     else
@@ -358,8 +403,8 @@ int KStringCompare(const KString StrA, const KString StrB)
         }
 
         // Prefixes match: compare full strings
-        const char* pDataA = (const char*)GetPointer(StrA.LongStr.PtrAndClass);
-        const char* pDataB = (const char*)GetPointer(StrB.LongStr.PtrAndClass);
+        const char* pDataA = (const char*)KS_GetPointer(StrA.LongStr.PtrAndClass);
+        const char* pDataB = (const char*)KS_GetPointer(StrB.LongStr.PtrAndClass);
         return memcmp(pDataA, pDataB, SizeA);
     }
 }
@@ -388,7 +433,7 @@ bool KStringStartsWith(const KString Str, const KString Prefix)
     }
     else if (true == KStringIsShort(Str))
     {
-        const char* pPrefixData = (true == KStringIsShort(Prefix)) ? Prefix.Content : (const char*)GetPointer(Prefix.LongStr.PtrAndClass);
+        const char* pPrefixData = (true == KStringIsShort(Prefix)) ? Prefix.Content : (const char*)KS_GetPointer(Prefix.LongStr.PtrAndClass);
         return memcmp(Str.Content, pPrefixData, Prefix.Size) == 0;
     }
     else if (true == KStringIsShort(Prefix))
@@ -400,7 +445,7 @@ bool KStringStartsWith(const KString Str, const KString Prefix)
         }
         else
         {
-            const char* pStrData = (const char*)GetPointer(Str.LongStr.PtrAndClass);
+            const char* pStrData = (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
             return memcmp(pStrData, Prefix.Content, Prefix.Size) == 0;
         }
     }
@@ -414,8 +459,8 @@ bool KStringStartsWith(const KString Str, const KString Prefix)
         else
         {
             // Prefix is longer than 4 chars: need full comparison
-            const char* pStrData    = (const char*)GetPointer(Str.LongStr.PtrAndClass);
-            const char* pPrefixData = (const char*)GetPointer(Prefix.LongStr.PtrAndClass);
+            const char* pStrData    = (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
+            const char* pPrefixData = (const char*)KS_GetPointer(Prefix.LongStr.PtrAndClass);
             return memcmp(pStrData, pPrefixData, Prefix.Size) == 0;
         }
     }
@@ -426,18 +471,18 @@ bool KStringStartsWith(const KString Str, const KString Prefix)
 //
 
 // Convert character to lowercase (ASCII only for performance)
-inline static char ToLowerAscii(char c)
+inline static char KS_ToLowerAscii(char c)
 {
     return (c >= 'A' && c <= 'Z') ? (c + 32) : c;
 }
 
 // Case-insensitive memory comparison (ASCII only)
-inline static int MemcmpIgnoreCase(const char* pStr1, const char* pStr2, size_t Size)
+inline static int KS_MemcmpIgnoreCase(const char* pStr1, const char* pStr2, size_t Size)
 {
     for (size_t i = 0; i < Size; ++i)
     {
-        char c1 = ToLowerAscii(pStr1[i]);
-        char c2 = ToLowerAscii(pStr2[i]);
+        char c1 = KS_ToLowerAscii(pStr1[i]);
+        char c2 = KS_ToLowerAscii(pStr2[i]);
         if (c1 != c2)
         {
             return (c1 < c2) ? -1 : 1;
@@ -462,28 +507,28 @@ int KStringCompareIgnoreCase(const KString StrA, const KString StrB)
     if (true == KStringIsShort(StrA) && true == KStringIsShort(StrB))
     {
         // Both short: direct memory comparison
-        return MemcmpIgnoreCase(StrA.Content, StrB.Content, StrA.Size);
+        return KS_MemcmpIgnoreCase(StrA.Content, StrB.Content, StrA.Size);
     }
     else if (true == KStringIsShort(StrA) || true == KStringIsShort(StrB))
     {
         // One short, one long: get actual data
-        const char* pDataA = (true == KStringIsShort(StrA)) ? StrA.Content : (const char*)GetPointer(StrA.LongStr.PtrAndClass);
-        const char* pDataB = (true == KStringIsShort(StrB)) ? StrB.Content : (const char*)GetPointer(StrB.LongStr.PtrAndClass);
-        return MemcmpIgnoreCase(pDataA, pDataB, StrA.Size);
+        const char* pDataA = (true == KStringIsShort(StrA)) ? StrA.Content : (const char*)KS_GetPointer(StrA.LongStr.PtrAndClass);
+        const char* pDataB = (true == KStringIsShort(StrB)) ? StrB.Content : (const char*)KS_GetPointer(StrB.LongStr.PtrAndClass);
+        return KS_MemcmpIgnoreCase(pDataA, pDataB, StrA.Size);
     }
     else
     {
         // Both long: compare prefixes first (fast path)
-        int PrefixCmp = MemcmpIgnoreCase(StrA.LongStr.Prefix, StrB.LongStr.Prefix, 4);
+        int PrefixCmp = KS_MemcmpIgnoreCase(StrA.LongStr.Prefix, StrB.LongStr.Prefix, 4);
         if (0 != PrefixCmp)
         {
             return PrefixCmp;
         }
 
         // Prefixes match: compare full strings
-        const char* pDataA = (const char*)GetPointer(StrA.LongStr.PtrAndClass);
-        const char* pDataB = (const char*)GetPointer(StrB.LongStr.PtrAndClass);
-        return MemcmpIgnoreCase(pDataA, pDataB, StrA.Size);
+        const char* pDataA = (const char*)KS_GetPointer(StrA.LongStr.PtrAndClass);
+        const char* pDataB = (const char*)KS_GetPointer(StrB.LongStr.PtrAndClass);
+        return KS_MemcmpIgnoreCase(pDataA, pDataB, StrA.Size);
     }
 }
 
@@ -507,24 +552,24 @@ bool KStringStartsWithIgnoreCase(const KString Str, const KString Prefix)
     // Compare prefixes efficiently (case-insensitive)
     if (true == KStringIsShort(Str) && true == KStringIsShort(Prefix))
     {
-        return 0 == MemcmpIgnoreCase(Str.Content, Prefix.Content, Prefix.Size);
+        return 0 == KS_MemcmpIgnoreCase(Str.Content, Prefix.Content, Prefix.Size);
     }
     else if (true == KStringIsShort(Str))
     {
-        const char* pPrefixData = (true == KStringIsShort(Prefix)) ? Prefix.Content : (const char*)GetPointer(Prefix.LongStr.PtrAndClass);
-        return 0 == MemcmpIgnoreCase(Str.Content, pPrefixData, Prefix.Size);
+        const char* pPrefixData = (true == KStringIsShort(Prefix)) ? Prefix.Content : (const char*)KS_GetPointer(Prefix.LongStr.PtrAndClass);
+        return 0 == KS_MemcmpIgnoreCase(Str.Content, pPrefixData, Prefix.Size);
     }
     else if (true == KStringIsShort(Prefix))
     {
         // Str is long, Prefix is short: check against stored prefix first
         if (Prefix.Size <= 4)
         {
-            return 0 == MemcmpIgnoreCase(Str.LongStr.Prefix, Prefix.Content, Prefix.Size);
+            return 0 == KS_MemcmpIgnoreCase(Str.LongStr.Prefix, Prefix.Content, Prefix.Size);
         }
         else
         {
-            const char* pStrData = (const char*)GetPointer(Str.LongStr.PtrAndClass);
-            return 0 == MemcmpIgnoreCase(pStrData, Prefix.Content, Prefix.Size);
+            const char* pStrData = (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
+            return 0 == KS_MemcmpIgnoreCase(pStrData, Prefix.Content, Prefix.Size);
         }
     }
     else
@@ -532,14 +577,14 @@ bool KStringStartsWithIgnoreCase(const KString Str, const KString Prefix)
         // Both long: use stored prefixes for fast comparison
         if (Prefix.Size <= 4)
         {
-            return 0 == MemcmpIgnoreCase(Str.LongStr.Prefix, Prefix.LongStr.Prefix, Prefix.Size);
+            return 0 == KS_MemcmpIgnoreCase(Str.LongStr.Prefix, Prefix.LongStr.Prefix, Prefix.Size);
         }
         else
         {
             // Prefix is longer than 4 chars: need full comparison
-            const char* pStrData    = (const char*)GetPointer(Str.LongStr.PtrAndClass);
-            const char* pPrefixData = (const char*)GetPointer(Prefix.LongStr.PtrAndClass);
-            return 0 == MemcmpIgnoreCase(pStrData, pPrefixData, Prefix.Size);
+            const char* pStrData    = (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
+            const char* pPrefixData = (const char*)KS_GetPointer(Prefix.LongStr.PtrAndClass);
+            return 0 == KS_MemcmpIgnoreCase(pStrData, pPrefixData, Prefix.Size);
         }
     }
 }
@@ -555,8 +600,15 @@ KString KStringConcat(const KString StrA, const KString StrB)
         return KStringInvalid();
     }
 
-    size_t SizeA       = GetSizeFromField(StrA.Size);
-    size_t SizeB       = GetSizeFromField(StrB.Size);
+    size_t SizeA = KS_GetSizeFromField(StrA.Size);
+    size_t SizeB = KS_GetSizeFromField(StrB.Size);
+
+    // Check for arithmetic overflow in addition (security check)
+    if (SizeA > SIZE_MAX - SizeB)
+    {
+        return KStringInvalid(); // Overflow would occur
+    }
+
     size_t TotalLength = SizeA + SizeB;
 
     if (TotalLength > KSTRING_SIZE_MASK)
@@ -565,18 +617,18 @@ KString KStringConcat(const KString StrA, const KString StrB)
     }
 
     // Use encoding from first string
-    KStringEncoding Encoding = GetEncodingFromField(StrA.Size);
+    KStringEncoding Encoding = KS_GetEncodingFromField(StrA.Size);
 
     // Allocate buffer for concatenated string
-    char* pBuffer = KStringAlloc(TotalLength + 1); // Zero-initialized
+    char* pBuffer = KS_Alloc(TotalLength + 1); // Zero-initialized
     if (NULL == pBuffer)
     {
         return KStringInvalid();
     }
 
     // Copy data from both strings
-    const char* pDataA = (true == KStringIsShort(StrA)) ? StrA.Content : (const char*)GetPointer(StrA.LongStr.PtrAndClass);
-    const char* pDataB = (true == KStringIsShort(StrB)) ? StrB.Content : (const char*)GetPointer(StrB.LongStr.PtrAndClass);
+    const char* pDataA = (true == KStringIsShort(StrA)) ? StrA.Content : (const char*)KS_GetPointer(StrA.LongStr.PtrAndClass);
+    const char* pDataB = (true == KStringIsShort(StrB)) ? StrB.Content : (const char*)KS_GetPointer(StrB.LongStr.PtrAndClass);
 
     memcpy(pBuffer, pDataA, SizeA);
     memcpy(pBuffer + SizeA, pDataB, SizeB);
@@ -584,15 +636,15 @@ KString KStringConcat(const KString StrA, const KString StrB)
 
     // Create result KString with encoding from first string
     KString Result;
-    Result.Size = CreateSizeField(TotalLength, Encoding);
+    Result.Size = KS_CreateSizeField(TotalLength, Encoding);
 
     if (KSTRING_INVALID_LENGTH == Result.Size)
     {
-        free(pBuffer);
+        KS_Release((void**)&pBuffer);
         return KStringInvalid();
     }
 
-    if (IsShortString(TotalLength))
+    if (KS_IsShortString(TotalLength))
     {
         // Result fits in short string
         memcpy(Result.Content, pBuffer, TotalLength);
@@ -600,13 +652,13 @@ KString KStringConcat(const KString StrA, const KString StrB)
         {
             memset(Result.Content + TotalLength, 0, KSTRING_MAX_SHORT_LENGTH - TotalLength);
         }
-        free(pBuffer); // Don't need allocated buffer
+        KS_Release((void**)&pBuffer); // Don't need allocated buffer
     }
     else
     {
         // Result is long string
         memcpy(Result.LongStr.Prefix, pBuffer, 4);
-        Result.LongStr.PtrAndClass = CreateTaggedPointer(pBuffer, KSTRING_TEMPORARY);
+        Result.LongStr.PtrAndClass = KS_CreateTaggedPointer(pBuffer, KSTRING_TEMPORARY);
     }
 
     return Result;
@@ -619,8 +671,8 @@ KString KStringSubstring(const KString Str, const size_t Offset, const size_t Si
         return KStringInvalid();
     }
 
-    size_t          StrSize  = GetSizeFromField(Str.Size);
-    KStringEncoding Encoding = GetEncodingFromField(Str.Size);
+    size_t          StrSize  = KS_GetSizeFromField(Str.Size);
+    KStringEncoding Encoding = KS_GetEncodingFromField(Str.Size);
 
     if (Offset >= StrSize)
     {
@@ -641,17 +693,17 @@ KString KStringSubstring(const KString Str, const size_t Offset, const size_t Si
         return KStringInvalid();
     }
 
-    const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
+    const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
     KString Result;
-    Result.Size = CreateSizeField(LocalSize, Encoding);
+    Result.Size = KS_CreateSizeField(LocalSize, Encoding);
 
     if (KSTRING_INVALID_LENGTH == Result.Size)
     {
         return KStringInvalid();
     }
 
-    if (IsShortString(LocalSize))
+    if (KS_IsShortString(LocalSize))
     {
         // Result fits in short string
         memcpy(Result.Content, pSourceData + Offset, LocalSize);
@@ -663,7 +715,7 @@ KString KStringSubstring(const KString Str, const size_t Offset, const size_t Si
     else
     {
         // Result requires long string
-        char* pBuffer = KStringAlloc(LocalSize + 1); // Zero-initialized
+        char* pBuffer = KS_Alloc(LocalSize + 1); // Zero-initialized
         if (NULL == pBuffer)
         {
             return KStringInvalid();
@@ -673,7 +725,7 @@ KString KStringSubstring(const KString Str, const size_t Offset, const size_t Si
         pBuffer[LocalSize] = '\0';
 
         memcpy(Result.LongStr.Prefix, pBuffer, 4);
-        Result.LongStr.PtrAndClass = CreateTaggedPointer(pBuffer, KSTRING_TEMPORARY);
+        Result.LongStr.PtrAndClass = KS_CreateTaggedPointer(pBuffer, KSTRING_TEMPORARY);
     }
 
     return Result;
@@ -684,7 +736,7 @@ KString KStringSubstring(const KString Str, const size_t Offset, const size_t Si
 //
 
 // Helper function: Convert UTF-8 to UTF-16 (Little Endian)
-static size_t ConvertUtf8ToUtf16Le(const char* pUtf8, size_t Utf8Size, uint16_t* pUtf16, size_t MaxUtf16Size)
+static size_t KS_ConvertUtf8ToUtf16Le(const char* pUtf8, size_t Utf8Size, uint16_t* pUtf16, size_t MaxUtf16Size)
 {
     size_t Utf16Count = 0;
     size_t i          = 0;
@@ -771,7 +823,7 @@ static size_t ConvertUtf8ToUtf16Le(const char* pUtf8, size_t Utf8Size, uint16_t*
 }
 
 // Helper function: Convert UTF-16 (Little Endian) to UTF-8
-static size_t ConvertUtf16LeToUtf8(const uint16_t* pUtf16, size_t Utf16Size, char* pUtf8, size_t MaxUtf8Size)
+static size_t KS_ConvertUtf16LeToUtf8(const uint16_t* pUtf16, size_t Utf16Size, char* pUtf8, size_t MaxUtf8Size)
 {
     size_t Utf8Count = 0;
     size_t i         = 0;
@@ -829,7 +881,7 @@ static size_t ConvertUtf16LeToUtf8(const uint16_t* pUtf16, size_t Utf16Size, cha
 }
 
 // Helper function: Convert UTF-8 to ANSI (Windows-1252)
-static size_t ConvertUtf8ToAnsi(const char* pUtf8, size_t Utf8Size, char* pAnsi, size_t MaxAnsiSize)
+static size_t KS_ConvertUtf8ToAnsi(const char* pUtf8, size_t Utf8Size, char* pAnsi, size_t MaxAnsiSize)
 {
     size_t AnsiCount = 0;
     size_t i         = 0;
@@ -887,7 +939,7 @@ static size_t ConvertUtf8ToAnsi(const char* pUtf8, size_t Utf8Size, char* pAnsi,
 }
 
 // Helper function: Convert ANSI (Windows-1252) to UTF-8
-static size_t ConvertAnsiToUtf8(const char* pAnsi, size_t AnsiSize, char* pUtf8, size_t MaxUtf8Size)
+static size_t KS_ConvertAnsiToUtf8(const char* pAnsi, size_t AnsiSize, char* pUtf8, size_t MaxUtf8Size)
 {
     size_t Utf8Count = 0;
 
@@ -931,13 +983,13 @@ KString KStringConvertToEncoding(const KString Str, const KStringEncoding Target
         return KStringInvalid();
     }
 
-    KStringEncoding SourceEncoding = GetEncodingFromField(Str.Size);
+    KStringEncoding SourceEncoding = KS_GetEncodingFromField(Str.Size);
 
     // If already the target encoding, return a copy
     if (SourceEncoding == TargetEncoding)
     {
-        size_t      StrSize = GetSizeFromField(Str.Size);
-        const char* pData   = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
+        size_t      StrSize = KS_GetSizeFromField(Str.Size);
+        const char* pData   = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
         return KStringCreateWithEncoding(pData, StrSize, TargetEncoding);
     }
 
@@ -1044,52 +1096,52 @@ KString KStringConvertToEncoding(const KString Str, const KStringEncoding Target
 // UTF-8 <-> UTF-16LE conversion
 KString KStringConvertUtf8ToUtf16Le(const KString Str)
 {
-    if (false == KStringIsValid(Str) || GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF8)
+    if (false == KStringIsValid(Str) || KS_GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF8)
     {
         return KStringInvalid();
     }
 
-    size_t      Utf8Size  = GetSizeFromField(Str.Size);
-    const char* pUtf8Data = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
+    size_t      Utf8Size  = KS_GetSizeFromField(Str.Size);
+    const char* pUtf8Data = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
     // Estimate UTF-16 size (worst case: each UTF-8 byte becomes a UTF-16 character)
     size_t    MaxUtf16Count = Utf8Size;
-    uint16_t* pUtf16Buffer  = (uint16_t*)KStringAlloc((MaxUtf16Count + 1) * sizeof(uint16_t));
+    uint16_t* pUtf16Buffer  = (uint16_t*)KS_Alloc((MaxUtf16Count + 1) * sizeof(uint16_t));
     if (NULL == pUtf16Buffer)
     {
         return KStringInvalid();
     }
 
-    size_t Utf16Count = ConvertUtf8ToUtf16Le(pUtf8Data, Utf8Size, pUtf16Buffer, MaxUtf16Count);
+    size_t Utf16Count = KS_ConvertUtf8ToUtf16Le(pUtf8Data, Utf8Size, pUtf16Buffer, MaxUtf16Count);
 
     KString Result = KStringCreateWithEncoding((const char*)pUtf16Buffer, Utf16Count * sizeof(uint16_t), KSTRING_ENCODING_UTF16LE);
-    free(pUtf16Buffer);
+    KS_Release((void**)&pUtf16Buffer);
 
     return Result;
 }
 
 KString KStringConvertUtf16LeToUtf8(const KString Str)
 {
-    if (false == KStringIsValid(Str) || GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF16LE)
+    if (false == KStringIsValid(Str) || KS_GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF16LE)
     {
         return KStringInvalid();
     }
 
-    size_t          Utf16Size  = GetSizeFromField(Str.Size) / sizeof(uint16_t);
-    const uint16_t* pUtf16Data = (const uint16_t*)((true == KStringIsShort(Str)) ? Str.Content : GetPointer(Str.LongStr.PtrAndClass));
+    size_t          Utf16Size  = KS_GetSizeFromField(Str.Size) / sizeof(uint16_t);
+    const uint16_t* pUtf16Data = (const uint16_t*)((true == KStringIsShort(Str)) ? Str.Content : KS_GetPointer(Str.LongStr.PtrAndClass));
 
     // Estimate UTF-8 size (worst case: each UTF-16 character becomes 4 UTF-8 bytes)
     size_t MaxUtf8Size = Utf16Size * 4;
-    char*  pUtf8Buffer = KStringAlloc(MaxUtf8Size + 1);
+    char*  pUtf8Buffer = KS_Alloc(MaxUtf8Size + 1);
     if (NULL == pUtf8Buffer)
     {
         return KStringInvalid();
     }
 
-    size_t Utf8Count = ConvertUtf16LeToUtf8(pUtf16Data, Utf16Size, pUtf8Buffer, MaxUtf8Size);
+    size_t Utf8Count = KS_ConvertUtf16LeToUtf8(pUtf16Data, Utf16Size, pUtf8Buffer, MaxUtf8Size);
 
     KString Result = KStringCreateWithEncoding(pUtf8Buffer, Utf8Count, KSTRING_ENCODING_UTF8);
-    free(pUtf8Buffer);
+    KS_Release((void**)&pUtf8Buffer);
 
     return Result;
 }
@@ -1125,15 +1177,15 @@ KString KStringConvertUtf16BeToUtf8(const KString Str)
 // UTF-16LE <-> UTF-16BE conversion (byte swapping)
 KString KStringConvertUtf16LeToUtf16Be(const KString Str)
 {
-    if (false == KStringIsValid(Str) || GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF16LE)
+    if (false == KStringIsValid(Str) || KS_GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF16LE)
     {
         return KStringInvalid();
     }
 
-    size_t      DataSize    = GetSizeFromField(Str.Size);
-    const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
+    size_t      DataSize    = KS_GetSizeFromField(Str.Size);
+    const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
-    char* pSwappedData = KStringAlloc(DataSize + 2); // +2 for potential null terminator
+    char* pSwappedData = KS_Alloc(DataSize + 2); // +2 for potential null terminator
     if (NULL == pSwappedData)
     {
         return KStringInvalid();
@@ -1147,22 +1199,22 @@ KString KStringConvertUtf16LeToUtf16Be(const KString Str)
     }
 
     KString Result = KStringCreateWithEncoding(pSwappedData, DataSize, KSTRING_ENCODING_UTF16BE);
-    free(pSwappedData);
+    KS_Release((void**)&pSwappedData);
 
     return Result;
 }
 
 KString KStringConvertUtf16BeToUtf16Le(const KString Str)
 {
-    if (false == KStringIsValid(Str) || GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF16BE)
+    if (false == KStringIsValid(Str) || KS_GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF16BE)
     {
         return KStringInvalid();
     }
 
-    size_t      DataSize    = GetSizeFromField(Str.Size);
-    const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
+    size_t      DataSize    = KS_GetSizeFromField(Str.Size);
+    const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
-    char* pSwappedData = KStringAlloc(DataSize + 2); // +2 for potential null terminator
+    char* pSwappedData = KS_Alloc(DataSize + 2); // +2 for potential null terminator
     if (NULL == pSwappedData)
     {
         return KStringInvalid();
@@ -1176,7 +1228,7 @@ KString KStringConvertUtf16BeToUtf16Le(const KString Str)
     }
 
     KString Result = KStringCreateWithEncoding(pSwappedData, DataSize, KSTRING_ENCODING_UTF16LE);
-    free(pSwappedData);
+    KS_Release((void**)&pSwappedData);
 
     return Result;
 }
@@ -1184,48 +1236,48 @@ KString KStringConvertUtf16BeToUtf16Le(const KString Str)
 // UTF-8 <-> ANSI conversion
 KString KStringConvertUtf8ToAnsi(const KString Str)
 {
-    if (false == KStringIsValid(Str) || GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF8)
+    if (false == KStringIsValid(Str) || KS_GetEncodingFromField(Str.Size) != KSTRING_ENCODING_UTF8)
     {
         return KStringInvalid();
     }
 
-    size_t      Utf8Size  = GetSizeFromField(Str.Size);
-    const char* pUtf8Data = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
+    size_t      Utf8Size  = KS_GetSizeFromField(Str.Size);
+    const char* pUtf8Data = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
-    char* pAnsiBuffer = KStringAlloc(Utf8Size + 1); // ANSI is typically smaller than UTF-8
+    char* pAnsiBuffer = KS_Alloc(Utf8Size + 1); // ANSI is typically smaller than UTF-8
     if (NULL == pAnsiBuffer)
     {
         return KStringInvalid();
     }
 
-    size_t AnsiCount = ConvertUtf8ToAnsi(pUtf8Data, Utf8Size, pAnsiBuffer, Utf8Size);
+    size_t AnsiCount = KS_ConvertUtf8ToAnsi(pUtf8Data, Utf8Size, pAnsiBuffer, Utf8Size);
 
     KString Result = KStringCreateWithEncoding(pAnsiBuffer, AnsiCount, KSTRING_ENCODING_ANSI);
-    free(pAnsiBuffer);
+    KS_Release((void**)&pAnsiBuffer);
 
     return Result;
 }
 
 KString KStringConvertAnsiToUtf8(const KString Str)
 {
-    if (false == KStringIsValid(Str) || GetEncodingFromField(Str.Size) != KSTRING_ENCODING_ANSI)
+    if (false == KStringIsValid(Str) || KS_GetEncodingFromField(Str.Size) != KSTRING_ENCODING_ANSI)
     {
         return KStringInvalid();
     }
 
-    size_t      AnsiSize  = GetSizeFromField(Str.Size);
-    const char* pAnsiData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
+    size_t      AnsiSize  = KS_GetSizeFromField(Str.Size);
+    const char* pAnsiData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
-    char* pUtf8Buffer = KStringAlloc(AnsiSize * 3 + 1); // UTF-8 can be up to 3x larger
+    char* pUtf8Buffer = KS_Alloc(AnsiSize * 3 + 1); // UTF-8 can be up to 3x larger
     if (NULL == pUtf8Buffer)
     {
         return KStringInvalid();
     }
 
-    size_t Utf8Count = ConvertAnsiToUtf8(pAnsiData, AnsiSize, pUtf8Buffer, AnsiSize * 3);
+    size_t Utf8Count = KS_ConvertAnsiToUtf8(pAnsiData, AnsiSize, pUtf8Buffer, AnsiSize * 3);
 
     KString Result = KStringCreateWithEncoding(pUtf8Buffer, Utf8Count, KSTRING_ENCODING_UTF8);
-    free(pUtf8Buffer);
+    KS_Release((void**)&pUtf8Buffer);
 
     return Result;
 }
