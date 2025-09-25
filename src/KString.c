@@ -416,12 +416,16 @@ bool KStringEquals(const KString StrA, const KString StrB)
 
 bool KStringStartsWith(const KString Str, const KString Prefix)
 {
-    if (Prefix.Size > Str.Size)
+    // Extract actual sizes using helper functions (security fix)
+    size_t StrSize    = KS_GetSizeFromField(Str.Size);
+    size_t PrefixSize = KS_GetSizeFromField(Prefix.Size);
+
+    if (PrefixSize > StrSize)
     {
         return false;
     }
 
-    if (Prefix.Size == 0)
+    if (0 == PrefixSize)
     {
         return true;
     }
@@ -429,39 +433,39 @@ bool KStringStartsWith(const KString Str, const KString Prefix)
     // Compare prefixes efficiently
     if (true == KStringIsShort(Str) && true == KStringIsShort(Prefix))
     {
-        return memcmp(Str.Content, Prefix.Content, Prefix.Size) == 0;
+        return memcmp(Str.Content, Prefix.Content, PrefixSize) == 0;
     }
     else if (true == KStringIsShort(Str))
     {
         const char* pPrefixData = (true == KStringIsShort(Prefix)) ? Prefix.Content : (const char*)KS_GetPointer(Prefix.LongStr.PtrAndClass);
-        return memcmp(Str.Content, pPrefixData, Prefix.Size) == 0;
+        return memcmp(Str.Content, pPrefixData, PrefixSize) == 0;
     }
     else if (true == KStringIsShort(Prefix))
     {
         // Str is long, Prefix is short: check against stored prefix first
-        if (Prefix.Size <= 4)
+        if (PrefixSize <= 4)
         {
-            return memcmp(Str.LongStr.Prefix, Prefix.Content, Prefix.Size) == 0;
+            return memcmp(Str.LongStr.Prefix, Prefix.Content, PrefixSize) == 0;
         }
         else
         {
             const char* pStrData = (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
-            return memcmp(pStrData, Prefix.Content, Prefix.Size) == 0;
+            return memcmp(pStrData, Prefix.Content, PrefixSize) == 0;
         }
     }
     else
     {
         // Both long: use stored prefixes for fast comparison
-        if (Prefix.Size <= 4)
+        if (PrefixSize <= 4)
         {
-            return memcmp(Str.LongStr.Prefix, Prefix.LongStr.Prefix, Prefix.Size) == 0;
+            return memcmp(Str.LongStr.Prefix, Prefix.LongStr.Prefix, PrefixSize) == 0;
         }
         else
         {
             // Prefix is longer than 4 chars: need full comparison
             const char* pStrData    = (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
             const char* pPrefixData = (const char*)KS_GetPointer(Prefix.LongStr.PtrAndClass);
-            return memcmp(pStrData, pPrefixData, Prefix.Size) == 0;
+            return memcmp(pStrData, pPrefixData, PrefixSize) == 0;
         }
     }
 }
@@ -539,12 +543,16 @@ bool KStringEqualsIgnoreCase(const KString StrA, const KString StrB)
 
 bool KStringStartsWithIgnoreCase(const KString Str, const KString Prefix)
 {
-    if (Prefix.Size > Str.Size)
+    // Extract actual sizes using helper functions (security fix)
+    size_t StrSize    = KS_GetSizeFromField(Str.Size);
+    size_t PrefixSize = KS_GetSizeFromField(Prefix.Size);
+
+    if (PrefixSize > StrSize)
     {
         return false;
     }
 
-    if (0 == Prefix.Size)
+    if (0 == PrefixSize)
     {
         return true;
     }
@@ -552,39 +560,39 @@ bool KStringStartsWithIgnoreCase(const KString Str, const KString Prefix)
     // Compare prefixes efficiently (case-insensitive)
     if (true == KStringIsShort(Str) && true == KStringIsShort(Prefix))
     {
-        return 0 == KS_MemcmpIgnoreCase(Str.Content, Prefix.Content, Prefix.Size);
+        return 0 == KS_MemcmpIgnoreCase(Str.Content, Prefix.Content, PrefixSize);
     }
     else if (true == KStringIsShort(Str))
     {
         const char* pPrefixData = (true == KStringIsShort(Prefix)) ? Prefix.Content : (const char*)KS_GetPointer(Prefix.LongStr.PtrAndClass);
-        return 0 == KS_MemcmpIgnoreCase(Str.Content, pPrefixData, Prefix.Size);
+        return 0 == KS_MemcmpIgnoreCase(Str.Content, pPrefixData, PrefixSize);
     }
     else if (true == KStringIsShort(Prefix))
     {
         // Str is long, Prefix is short: check against stored prefix first
-        if (Prefix.Size <= 4)
+        if (PrefixSize <= 4)
         {
-            return 0 == KS_MemcmpIgnoreCase(Str.LongStr.Prefix, Prefix.Content, Prefix.Size);
+            return 0 == KS_MemcmpIgnoreCase(Str.LongStr.Prefix, Prefix.Content, PrefixSize);
         }
         else
         {
             const char* pStrData = (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
-            return 0 == KS_MemcmpIgnoreCase(pStrData, Prefix.Content, Prefix.Size);
+            return 0 == KS_MemcmpIgnoreCase(pStrData, Prefix.Content, PrefixSize);
         }
     }
     else
     {
         // Both long: use stored prefixes for fast comparison
-        if (Prefix.Size <= 4)
+        if (PrefixSize <= 4)
         {
-            return 0 == KS_MemcmpIgnoreCase(Str.LongStr.Prefix, Prefix.LongStr.Prefix, Prefix.Size);
+            return 0 == KS_MemcmpIgnoreCase(Str.LongStr.Prefix, Prefix.LongStr.Prefix, PrefixSize);
         }
         else
         {
             // Prefix is longer than 4 chars: need full comparison
             const char* pStrData    = (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
             const char* pPrefixData = (const char*)KS_GetPointer(Prefix.LongStr.PtrAndClass);
-            return 0 == KS_MemcmpIgnoreCase(pStrData, pPrefixData, Prefix.Size);
+            return 0 == KS_MemcmpIgnoreCase(pStrData, pPrefixData, PrefixSize);
         }
     }
 }

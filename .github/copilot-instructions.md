@@ -391,6 +391,24 @@ rmdir /s /q _build && cmake -GNinja -B_build && cmake --build _build
 3. **Optimize**: Apply German string optimizations based on research
 4. **Document**: Keep this file updated with implementation details
 
+### **Commit Policy - CRITICAL**
+**NEVER commit automatically** - Always wait for explicit "commit the changes" instruction.
+
+**Why NEVER Commit Automatically:**
+1. **Review Opportunity**: User needs chance to review changes before they're committed
+2. **Repository Stability**: Auto-committing can leave the repository in an unstable state
+3. **Documentation Sync**: Updating copilot instructions after committing code changes creates inconsistency
+4. **User Control**: User maintains full control over what gets committed and when
+
+**Correct Workflow:**
+1. Make code changes when requested
+2. Verify changes work (build, test)
+3. **STOP** - Wait for explicit "commit the changes" instruction
+4. Only then stage and commit with proper conventional commit message
+5. Update copilot instructions if needed as separate step
+
+This ensures user can review changes, make additional modifications, test thoroughly, decide timing, and maintain repository stability.
+
 ## Code Style
 
 - **Formatting**: Automatically handled by `.clang-format` configuration file
