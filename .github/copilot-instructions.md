@@ -140,6 +140,7 @@ KString/
 - **Consistent Naming**: Use `KString` prefix for all public functions (PascalCase)
 - **Memory Safety**: Proper allocation/deallocation patterns
 - **Platform Portability**: Write code that compiles and runs on Linux, macOS, and Windows
+- **Git Commands**: Always use traditional git commands via `run_in_terminal` tool (never use GitKraken MCP functions - they are unreliable)
 
 ## Kraut String Research Context
 
@@ -431,6 +432,7 @@ rmdir /s /q _build && cmake -GNinja -B_build && cmake --build _build
 ## Recent Updates & Decisions
 
 ### September 25, 2025
+- **Memory safety and code consistency enhancements**: Completed major refactoring of KString.c implementation with standardized KS_ prefix for all private functions, enhanced memory safety through KS_Release() function, comprehensive pointer validation, arithmetic overflow protection, and improved bounds checking. This strengthens the library's robustness while maintaining the 16-byte German String optimization specifications (commit bdb838d).
 - **Copilot instructions confirmed and analyzed**: Reviewed complete project structure, confirmed understanding of Kraut Strings implementation based on German String research, and validated current codebase status. Project has solid foundation with complete API definition, partial implementation, working build system, and example program.
 
 ### September 18, 2025
