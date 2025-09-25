@@ -1,8 +1,8 @@
 #include "KString.h"
 #include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-
 //
 // KString Implementation - Kraut Strings
 // Based on German String research from Umbra/CedarDB
@@ -15,6 +15,29 @@
 
 // Invalid length marker for error handling
 #define KSTRING_INVALID_LENGTH UINT32_MAX
+
+// Memory alignment for optimal performance
+#define KSTRING_ALIGNMENT 8
+
+//
+// Private Memory Management Functions
+//
+
+// Allocate aligned memory using calloc (private function)
+// Rounds up Size to next 8-byte boundary for optimal memory access
+inline static void* KStringAlloc(size_t Size)
+{
+    if (0 == Size)
+    {
+        return NULL;
+    }
+
+    // Round up to next 8-byte boundary
+    size_t AlignedSize = (Size + KSTRING_ALIGNMENT - 1) & ~(KSTRING_ALIGNMENT - 1);
+
+    // Use calloc for zero-initialized memory (0x00 fill)
+    return calloc(1, AlignedSize);
+}
 
 //
 // Private Helper Functions
@@ -109,7 +132,7 @@ KString KStringCreateWithEncoding(const char* pStr, const size_t Size, const KSt
     else
     {
         // Long string: allocate memory and store prefix
-        char* pData = calloc(Size + 1, 1); // +1 for null terminator, zero-initialized
+        char* pData = KStringAlloc(Size + 1); // +1 for null terminator, zero-initialized
         if (NULL == pData)
         {
             return KStringInvalid();
@@ -545,7 +568,7 @@ KString KStringConcat(const KString StrA, const KString StrB)
     KStringEncoding Encoding = GetEncodingFromField(StrA.Size);
 
     // Allocate buffer for concatenated string
-    char* pBuffer = calloc(TotalLength + 1, 1); // Zero-initialized
+    char* pBuffer = KStringAlloc(TotalLength + 1); // Zero-initialized
     if (NULL == pBuffer)
     {
         return KStringInvalid();
@@ -640,7 +663,7 @@ KString KStringSubstring(const KString Str, const size_t Offset, const size_t Si
     else
     {
         // Result requires long string
-        char* pBuffer = calloc(LocalSize + 1, 1); // Zero-initialized
+        char* pBuffer = KStringAlloc(LocalSize + 1); // Zero-initialized
         if (NULL == pBuffer)
         {
             return KStringInvalid();
@@ -1031,7 +1054,7 @@ KString KStringConvertUtf8ToUtf16Le(const KString Str)
 
     // Estimate UTF-16 size (worst case: each UTF-8 byte becomes a UTF-16 character)
     size_t    MaxUtf16Count = Utf8Size;
-    uint16_t* pUtf16Buffer  = calloc(MaxUtf16Count + 1, sizeof(uint16_t));
+    uint16_t* pUtf16Buffer  = (uint16_t*)KStringAlloc((MaxUtf16Count + 1) * sizeof(uint16_t));
     if (NULL == pUtf16Buffer)
     {
         return KStringInvalid();
@@ -1057,7 +1080,7 @@ KString KStringConvertUtf16LeToUtf8(const KString Str)
 
     // Estimate UTF-8 size (worst case: each UTF-16 character becomes 4 UTF-8 bytes)
     size_t MaxUtf8Size = Utf16Size * 4;
-    char*  pUtf8Buffer = calloc(MaxUtf8Size + 1, 1);
+    char*  pUtf8Buffer = KStringAlloc(MaxUtf8Size + 1);
     if (NULL == pUtf8Buffer)
     {
         return KStringInvalid();
@@ -1110,7 +1133,7 @@ KString KStringConvertUtf16LeToUtf16Be(const KString Str)
     size_t      DataSize    = GetSizeFromField(Str.Size);
     const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
 
-    char* pSwappedData = calloc(DataSize + 2, 1); // +2 for potential null terminator
+    char* pSwappedData = KStringAlloc(DataSize + 2); // +2 for potential null terminator
     if (NULL == pSwappedData)
     {
         return KStringInvalid();
@@ -1139,7 +1162,7 @@ KString KStringConvertUtf16BeToUtf16Le(const KString Str)
     size_t      DataSize    = GetSizeFromField(Str.Size);
     const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
 
-    char* pSwappedData = calloc(DataSize + 2, 1); // +2 for potential null terminator
+    char* pSwappedData = KStringAlloc(DataSize + 2); // +2 for potential null terminator
     if (NULL == pSwappedData)
     {
         return KStringInvalid();
@@ -1169,7 +1192,7 @@ KString KStringConvertUtf8ToAnsi(const KString Str)
     size_t      Utf8Size  = GetSizeFromField(Str.Size);
     const char* pUtf8Data = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
 
-    char* pAnsiBuffer = calloc(Utf8Size + 1, 1); // ANSI is typically smaller than UTF-8
+    char* pAnsiBuffer = KStringAlloc(Utf8Size + 1); // ANSI is typically smaller than UTF-8
     if (NULL == pAnsiBuffer)
     {
         return KStringInvalid();
@@ -1193,7 +1216,7 @@ KString KStringConvertAnsiToUtf8(const KString Str)
     size_t      AnsiSize  = GetSizeFromField(Str.Size);
     const char* pAnsiData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)GetPointer(Str.LongStr.PtrAndClass);
 
-    char* pUtf8Buffer = calloc(AnsiSize * 3 + 1, 1); // UTF-8 can be up to 3x larger
+    char* pUtf8Buffer = KStringAlloc(AnsiSize * 3 + 1); // UTF-8 can be up to 3x larger
     if (NULL == pUtf8Buffer)
     {
         return KStringInvalid();
