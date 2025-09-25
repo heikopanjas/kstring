@@ -1,6 +1,6 @@
 # KString Library - Copilot Instructions
 
-**Last updated:** September 18, 2025
+**Last updated:** September 25, 2025
 
 ## Project Overview
 
@@ -140,6 +140,7 @@ KString/
 - **Consistent Naming**: Use `KString` prefix for all public functions (PascalCase)
 - **Memory Safety**: Proper allocation/deallocation patterns
 - **Platform Portability**: Write code that compiles and runs on Linux, macOS, and Windows
+- **Git Commands**: Always use traditional git commands via `run_in_terminal` tool (never use GitKraken MCP functions - they are unreliable)
 
 ## Kraut String Research Context
 
@@ -390,6 +391,24 @@ rmdir /s /q _build && cmake -GNinja -B_build && cmake --build _build
 3. **Optimize**: Apply German string optimizations based on research
 4. **Document**: Keep this file updated with implementation details
 
+### **Commit Policy - CRITICAL**
+**NEVER commit automatically** - Always wait for explicit "commit the changes" instruction.
+
+**Why NEVER Commit Automatically:**
+1. **Review Opportunity**: User needs chance to review changes before they're committed
+2. **Repository Stability**: Auto-committing can leave the repository in an unstable state
+3. **Documentation Sync**: Updating copilot instructions after committing code changes creates inconsistency
+4. **User Control**: User maintains full control over what gets committed and when
+
+**Correct Workflow:**
+1. Make code changes when requested
+2. Verify changes work (build, test)
+3. **STOP** - Wait for explicit "commit the changes" instruction
+4. Only then stage and commit with proper conventional commit message
+5. Update copilot instructions if needed as separate step
+
+This ensures user can review changes, make additional modifications, test thoroughly, decide timing, and maintain repository stability.
+
 ## Code Style
 
 - **Formatting**: Automatically handled by `.clang-format` configuration file
@@ -429,6 +448,10 @@ rmdir /s /q _build && cmake -GNinja -B_build && cmake --build _build
 - Integration with popular C frameworks
 
 ## Recent Updates & Decisions
+
+### September 25, 2025
+- **Memory safety and code consistency enhancements**: Completed major refactoring of KString.c implementation with standardized KS_ prefix for all private functions, enhanced memory safety through KS_Release() function, comprehensive pointer validation, arithmetic overflow protection, and improved bounds checking. This strengthens the library's robustness while maintaining the 16-byte German String optimization specifications (commit bdb838d).
+- **Copilot instructions confirmed and analyzed**: Reviewed complete project structure, confirmed understanding of Kraut Strings implementation based on German String research, and validated current codebase status. Project has solid foundation with complete API definition, partial implementation, working build system, and example program.
 
 ### September 18, 2025
 - **Initial copilot instructions setup**: Added timestamp tracking and recent updates section to maintain change history and decision rationale for the KString library development process.
