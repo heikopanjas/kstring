@@ -22,10 +22,13 @@ jobs:
                 include:
                     - os: ubuntu-latest
                       platform_name: Linux
+                      platform_id: linux
                     - os: macos-latest
                       platform_name: macOS
+                      platform_id: darwin
                     - os: windows-latest
                       platform_name: Windows
+                      platform_id: windows
 
         steps:
             - name: Checkout code
@@ -62,12 +65,12 @@ jobs:
               shell: bash
 
             - name: Create archive
-              run: tar -czf kstring-build${{ github.run_number }}-${{ steps.date.outputs.date }}.tar.gz -C artifact .
+              run: tar -czf kstring-${{ matrix.platform_id }}-build${{ github.run_number }}-${{ steps.date.outputs.date }}.tar.gz -C artifact .
               shell: bash
 
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
               with:
-                  name: kstring-build${{ github.run_number }}-${{ steps.date.outputs.date }}
-                  path: kstring-build${{ github.run_number }}-${{ steps.date.outputs.date }}.tar.gz
+                  name: kstring-${{ matrix.platform_id }}-build${{ github.run_number }}-${{ steps.date.outputs.date }}
+                  path: kstring-${{ matrix.platform_id }}-build${{ github.run_number }}-${{ steps.date.outputs.date }}.tar.gz
                   retention-days: 7
