@@ -151,18 +151,8 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
 
-# Optional: Enable testing if you want to add tests later
-option(BUILD_TESTS "Build tests" OFF)
-if(BUILD_TESTS)
-    enable_testing()
-    # Add test subdirectory if it exists
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests")
-        add_subdirectory(tests)
-    endif()
-endif()
-
 # Optional: Build examples
-option(BUILD_EXAMPLES "Build examples" ON)
+option(BUILD_EXAMPLES "Build examples" OFF)
 if(BUILD_EXAMPLES)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/_examples")
         add_subdirectory(_examples)
