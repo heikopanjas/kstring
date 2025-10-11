@@ -333,6 +333,11 @@ cmake --install build --prefix /opt/kstring
 ```text
 KString/
 ├── CMakeLists.txt           # Main build configuration
+├── build.sh                 # Build script (Linux/macOS)
+├── build.ps1                # Build script (Windows PowerShell)
+├── cmake/                   # CMake configuration files
+│   ├── kstring.pc.in       # pkg-config template
+│   └── KStringConfig.cmake.in # CMake config template
 ├── include/
 │   └── KString.h           # Public API header
 ├── src/
@@ -341,7 +346,9 @@ KString/
 │   ├── CMakeLists.txt      # Example build configuration
 │   └── main.c              # Demo program
 ├── _research/              # Research papers and documentation
-├── .copilot-instructions.md # Development guidelines
+├── .github/
+│   └── copilot-instructions.md # Copilot configuration
+├── AGENTS.md               # AI agent development guidelines
 └── README.md               # This file
 ```
 
