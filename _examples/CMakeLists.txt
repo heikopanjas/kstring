@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.30)
 
 # Example executable (C only)
 add_executable(kstring_demo main.c)
