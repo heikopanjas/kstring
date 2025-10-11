@@ -475,7 +475,7 @@ Follow these rules to prevent VSCode terminal crashes and ensure clean git histo
 - Add blank line after subject before body
 - Wrap each line at 72 characters maximum
 - Explain what and why, not how
-- Use bullet points for multiple items
+- Use bullet points (`-`) for multiple items with lowercase text after bullet
 - Keep it concise
 
 **Special Character Safety:**
@@ -499,8 +499,9 @@ Good:
 ```text
 feat(api): add KStringTrim function
 
-Add trimming function to remove whitespace from
-both ends of string. Supports all encodings.
+- add trimming function to remove whitespace from
+  both ends of string
+- supports all encodings
 ```
 
 Good (short):
