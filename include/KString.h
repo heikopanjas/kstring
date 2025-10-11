@@ -54,8 +54,8 @@ extern "C" {
     } KStringEncoding;
 
 // Bit masks for Size field (32 bits total)
-#define KSTRING_SIZE_MASK         0x3FFF'FFFF  // 30-bit size mask (max ~1GB)
-#define KSTRING_ENCODING_MASK     0xC000'0000  // 2-bit encoding mask
+#define KSTRING_SIZE_MASK         0x3FFFFFFF  // 30-bit size mask (max ~1GB)
+#define KSTRING_ENCODING_MASK     0xC0000000  // 2-bit encoding mask
 #define KSTRING_ENCODING_SHIFT    30
 
     // Storage classes for long strings

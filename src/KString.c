@@ -36,8 +36,8 @@
 //
 
 // Pointer tagging masks for storage class
-#define KSTRING_PTR_MASK     0x3FFF'FFFF'FFFF'FFFFULL  // 62-bit pointer mask
-#define KSTRING_CLASS_MASK   0xC000'0000'0000'0000ULL  // 2-bit storage class mask
+#define KSTRING_PTR_MASK     0x3FFFFFFFFFFFFFFFULL  // 62-bit pointer mask
+#define KSTRING_CLASS_MASK   0xC000000000000000ULL  // 2-bit storage class mask
 #define KSTRING_CLASS_SHIFT  62
 
 // Invalid length marker for error handling
@@ -826,7 +826,7 @@ static size_t KS_ConvertUtf8ToUtf16Le(const char* pUtf8, size_t Utf8Size, uint16
                 // Convert to surrogate pair
                 if (CodePoint > 0xFFFF && Utf16Count < MaxUtf16Size - 2)
                 {
-                    CodePoint            -= 0x1'0000;
+                    CodePoint            -= 0x10000;
                     pUtf16[Utf16Count++]  = (uint16_t)(0xD800 + (CodePoint >> 10));
                     pUtf16[Utf16Count++]  = (uint16_t)(0xDC00 + (CodePoint & 0x3FF));
                 }
@@ -873,7 +873,7 @@ static size_t KS_ConvertUtf16LeToUtf8(const uint16_t* pUtf16, size_t Utf16Size, 
             uint32_t LowSurrogate = pUtf16[i + 1];
             if (LowSurrogate >= 0xDC00 && LowSurrogate <= 0xDFFF)
             {
-                CodePoint  = 0x1'0000 + ((CodePoint - 0xD800) << 10) + (LowSurrogate - 0xDC00);
+                CodePoint  = 0x10000 + ((CodePoint - 0xD800) << 10) + (LowSurrogate - 0xDC00);
                 i         += 2;
             }
             else
@@ -897,13 +897,13 @@ static size_t KS_ConvertUtf16LeToUtf8(const uint16_t* pUtf16, size_t Utf16Size, 
             pUtf8[Utf8Count++] = (char)(0xC0 | (CodePoint >> 6));
             pUtf8[Utf8Count++] = (char)(0x80 | (CodePoint & 0x3F));
         }
-        else if (CodePoint < 0x1'0000)
+        else if (CodePoint < 0x10000)
         {
             pUtf8[Utf8Count++] = (char)(0xE0 | (CodePoint >> 12));
             pUtf8[Utf8Count++] = (char)(0x80 | ((CodePoint >> 6) & 0x3F));
             pUtf8[Utf8Count++] = (char)(0x80 | (CodePoint & 0x3F));
         }
-        else if (CodePoint < 0x11'0000)
+        else if (CodePoint < 0x110000)
         {
             pUtf8[Utf8Count++] = (char)(0xF0 | (CodePoint >> 18));
             pUtf8[Utf8Count++] = (char)(0x80 | ((CodePoint >> 12) & 0x3F));
