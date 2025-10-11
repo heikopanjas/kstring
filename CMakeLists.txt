@@ -32,7 +32,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 # Set C standard
-set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Add compiler flags for better error checking
@@ -70,7 +70,7 @@ set_target_properties(kstring PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION 1
     PUBLIC_HEADER "${KSTRING_HEADERS}"
-    C_STANDARD 23
+    C_STANDARD 17
     C_STANDARD_REQUIRED ON
 )
 
@@ -78,7 +78,7 @@ set_target_properties(kstring PROPERTIES
 set_target_properties(kstring_static PROPERTIES
     VERSION ${PROJECT_VERSION}
     PUBLIC_HEADER "${KSTRING_HEADERS}"
-    C_STANDARD 23
+    C_STANDARD 17
     C_STANDARD_REQUIRED ON
 )
 
