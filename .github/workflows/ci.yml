@@ -1,0 +1,59 @@
+name: CI
+
+on:
+    push:
+        branches:
+            - develop
+            - 'feature/**'
+    pull_request:
+        branches:
+            - develop
+            - 'feature/**'
+
+jobs:
+    build:
+        name: Build on ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
+
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, macos-latest, windows-latest]
+                include:
+                    - os: ubuntu-latest
+                      platform_name: Linux
+                    - os: macos-latest
+                      platform_name: macOS
+                    - os: windows-latest
+                      platform_name: Windows
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Install Ninja (Ubuntu)
+              if: matrix.os == 'ubuntu-latest'
+              run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+            - name: Install Ninja (macOS)
+              if: matrix.os == 'macos-latest'
+              run: brew install ninja
+
+            - name: Install Ninja (Windows)
+              if: matrix.os == 'windows-latest'
+              run: choco install ninja
+
+            - name: Configure CMake
+              run: cmake -GNinja -B_build -DCMAKE_BUILD_TYPE=Release
+
+            - name: Build
+              run: cmake --build _build --config Release
+
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: kstring-${{ matrix.platform_name }}-${{ github.sha }}
+                  path: |
+                      _build/libkstring.*
+                      _build/kstring.*
+                  retention-days: 7
