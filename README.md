@@ -317,7 +317,7 @@ cmake --install build --prefix /opt/kstring
 ## Build Requirements
 
 - **CMake 3.30+**: Modern CMake configuration
-- **C23 Compiler**: GCC, Clang, or MSVC with C23 support
+- **C17 Compiler**: GCC, Clang, or MSVC with C17 support
 - **Ninja**: Fast parallel builds (recommended)
 
 ### Platform Support

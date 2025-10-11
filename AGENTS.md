@@ -16,7 +16,7 @@ KString is a high-performance C library implementing "Kraut Strings" - a special
 
 ## Project Goals
 
-- **Pure C Implementation**: This project is exclusively written in C (C99 standard). No C++ code should be added.
+- **Pure C Implementation**: This project is exclusively written in C (C17 standard). No C++ code should be added.
 - **Kraut String Implementation**: Implement the "German String" format from Umbra/CedarDB research as "Kraut Strings"
 - **128-bit Fixed Size**: All string representations fit in exactly 16 bytes for register-based function calls
 - **High Performance**: Focus on speed and memory efficiency similar to database string implementations
@@ -127,7 +127,7 @@ KString/
     - Windows: `kstring.lib`
 
 ### Coding Standards
-- **C23 Standard**: Use modern C features with C23 standard for best performance and safety
+- **C17 Standard**: Use C17 standard for broad compiler compatibility including MSVC
 - **Const Correctness**: All KString input parameters are const to prevent accidental modification and improve maintainability
 - **Constant-Left Comparisons**: Always place constants on the left side of comparisons (e.g., `NULL == ptr`, `0 == value`)
 - **Parameter Naming Conventions**:
@@ -180,7 +180,7 @@ The library implements "Kraut Strings" based on the "German String" format from 
 - **Export Symbols**: Use proper symbol visibility on Windows (DLL export/import)
 
 ### Cross-Platform Guidelines
-- Use standard C99 features only
+- Use standard C17 features only
 - Avoid platform-specific system calls
 - Use CMake for build configuration portability
 - Test on all target platforms regularly
@@ -564,6 +564,8 @@ fix: update `KString` with "nested 'quotes'" & $special chars!
 
 ### October 11, 2025
 
+- **C standard downgraded to C17**: Changed from C23 to C17 for broader compiler compatibility, specifically to support MSVC on Windows. Removed C23-specific features like digit separators in numeric literals (e.g., `0x3FFF'FFFF` became `0x3FFFFFFF`). This ensures the library can be built with current versions of MSVC which don't yet support C23, while maintaining all functionality and performance characteristics.
+- **GitHub Actions CI workflow added**: Created comprehensive CI workflow with matrix builds for Linux, macOS, and Windows using platform-specific generators (Unix Makefiles for Linux/macOS, Visual Studio 2022 for Windows). Workflow triggers on develop and feature branches, creates platform-specific tar.gz artifacts with build numbers and dates, and uploads them for 7-day retention. Initial Windows support pending MSVC C23 compatibility.
 - **Commit message guidelines added**: Added comprehensive commit message guidelines to prevent VSCode terminal crashes. Guidelines include strict character limits (50 chars for subject, 72 chars per body line, 500 total), proper conventional commits format, special character safety rules, and examples of good vs bad commit messages. This addresses past issues where overly long or improperly formatted commit messages would crash the VSCode terminal during git operations.
 - **Comprehensive build scripts added**: Created `build.sh` (Linux/macOS) and `build.ps1` (Windows PowerShell) scripts to simplify the build process. These scripts provide dependency checking, clean builds, verbose output, test execution, example running, and support for multiple CMake generators. This makes building the project much easier for developers on all platforms without needing to remember CMake commands.
 - **Static library naming standardization**: Removed `_static` suffix from static library output names for cleaner, more conventional naming. Static libraries now generate as `libkstring.a` (Linux/macOS) and `kstring.lib` (Windows) instead of `libkstring_static.a`/`kstring_static.lib`. The target name remains `kstring_static` internally, but the OUTPUT_NAME property ensures clean output filenames. This aligns with standard library naming conventions where the file extension alone distinguishes static from shared libraries.
