@@ -34,9 +34,22 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
 
+            - name: Cache apt packages (Ubuntu)
+              if: matrix.os == 'ubuntu-latest'
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      /var/cache/apt/archives
+                      /var/lib/apt/lists
+                  key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/ci.yml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-apt-
+
             - name: Install Ninja (Ubuntu)
               if: matrix.os == 'ubuntu-latest'
-              run: sudo apt-get update && sudo apt-get install -y ninja-build
+              run: |
+                  sudo apt-get update -qq
+                  sudo apt-get install -y -qq ninja-build
 
             - name: Install Ninja (macOS)
               if: matrix.os == 'macos-latest'
