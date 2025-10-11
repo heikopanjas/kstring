@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.30)
 
 # Project name and version
 project(KString VERSION 1.0.0 LANGUAGES C)
@@ -50,7 +50,7 @@ install(TARGETS kstring
 
 # Optional: Create a static library as well
 add_library(kstring_static STATIC ${KSTRING_SOURCES} ${KSTRING_HEADERS})
-set_target_properties(kstring_static PROPERTIES OUTPUT_NAME kstring_static)
+set_target_properties(kstring_static PROPERTIES OUTPUT_NAME kstring)
 
 # Optional: Enable testing if you want to add tests later
 option(BUILD_TESTS "Build tests" OFF)
