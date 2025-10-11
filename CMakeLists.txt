@@ -3,19 +3,20 @@ cmake_minimum_required(VERSION 3.30)
 # Project name and version
 project(KString VERSION 1.0.0 LANGUAGES C)
 
+# Use standard installation directories
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 # Set C standard
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Add compiler flags for better error checking
 if(MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
+    add_compile_options(/W4)
 else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic")
+    add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
-
-# Include directories
-include_directories(include)
 
 # Source files
 set(KSTRING_SOURCES
@@ -27,30 +28,104 @@ set(KSTRING_HEADERS
     include/KString.h
 )
 
-# Create the library
+# Create shared library
 add_library(kstring SHARED ${KSTRING_SOURCES} ${KSTRING_HEADERS})
 
-# Set library properties
+# Create static library
+add_library(kstring_static STATIC ${KSTRING_SOURCES} ${KSTRING_HEADERS})
+
+# Set output name for static library
+set_target_properties(kstring_static PROPERTIES OUTPUT_NAME kstring)
+
+# Add alias targets for FetchContent usage
+add_library(KString::kstring ALIAS kstring)
+add_library(KString::kstring_static ALIAS kstring_static)
+
+# Set library properties for shared library
 set_target_properties(kstring PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION 1
-    PUBLIC_HEADER "include/KString.h"
+    PUBLIC_HEADER "${KSTRING_HEADERS}"
+    C_STANDARD 23
+    C_STANDARD_REQUIRED ON
 )
 
-# Platform-specific library naming (CMake handles this automatically)
-# Linux: libkstring.so, macOS: libkstring.dylib, Windows: kstring.dll
-
-# Installation rules
-install(TARGETS kstring
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin  # For Windows DLLs
-    PUBLIC_HEADER DESTINATION include
+# Set library properties for static library
+set_target_properties(kstring_static PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    PUBLIC_HEADER "${KSTRING_HEADERS}"
+    C_STANDARD 23
+    C_STANDARD_REQUIRED ON
 )
 
-# Optional: Create a static library as well
-add_library(kstring_static STATIC ${KSTRING_SOURCES} ${KSTRING_HEADERS})
-set_target_properties(kstring_static PROPERTIES OUTPUT_NAME kstring)
+# Configure include directories for both targets
+target_include_directories(kstring
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+target_include_directories(kstring_static
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+# Installation rules for targets
+install(TARGETS kstring kstring_static
+    EXPORT KStringTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+# Export targets for use in build tree
+export(EXPORT KStringTargets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/KStringTargets.cmake"
+    NAMESPACE KString::
+)
+
+# Install the export set
+install(EXPORT KStringTargets
+    FILE KStringTargets.cmake
+    NAMESPACE KString::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KString
+)
+
+# Generate package config file
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/KStringConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/KStringConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KString
+)
+
+# Generate version file
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/KStringConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+# Install package config files
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/KStringConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/KStringConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KString
+)
+
+# Generate pkg-config file
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/kstring.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/kstring.pc"
+    @ONLY
+)
+
+# Install pkg-config file
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/kstring.pc"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
 
 # Optional: Enable testing if you want to add tests later
 option(BUILD_TESTS "Build tests" OFF)

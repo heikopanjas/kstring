@@ -1,0 +1,14 @@
+@PACKAGE_INIT@
+
+# KString CMake Package Configuration File
+# This file allows other CMake projects to find and use KString library
+
+include("${CMAKE_CURRENT_LIST_DIR}/KStringTargets.cmake")
+
+# Provide variables for backward compatibility
+set(KString_LIBRARIES KString::kstring)
+set(KString_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@")
+set(KString_VERSION @PROJECT_VERSION@)
+
+# Check that all required components are available
+check_required_components(KString)
