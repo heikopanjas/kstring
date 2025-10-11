@@ -46,6 +46,13 @@
 // Memory alignment for optimal performance
 #define KSTRING_ALIGNMENT 8
 
+// Thread-local storage platform compatibility
+#ifdef _MSC_VER
+#define THREAD_LOCAL __declspec(thread)
+#else
+#define THREAD_LOCAL __thread
+#endif
+
 //
 // Private Memory Management Functions
 //
@@ -358,8 +365,8 @@ const char* KStringCStr(const KString Str)
     {
         // For short strings, we need to return a null-terminated copy
         // Use rotating buffers to handle multiple calls in one expression
-        static __thread char ShortBuffers[4][KSTRING_MAX_SHORT_LENGTH + 1];
-        static __thread int  BufferIndex = 0;
+        static THREAD_LOCAL char ShortBuffers[4][KSTRING_MAX_SHORT_LENGTH + 1];
+        static THREAD_LOCAL int  BufferIndex = 0;
 
         char* Buffer = ShortBuffers[BufferIndex];
         BufferIndex  = (BufferIndex + 1) % 4;
