@@ -61,15 +61,13 @@ jobs:
                   cp _build/kstring.* artifact/${{ matrix.platform_name }}/ 2>/dev/null || true
               shell: bash
 
-            - name: Create zip archive
-              run: |
-                  cd artifact
-                  zip -r ../kstring-build${{ github.run_number }}-${{ steps.date.outputs.date }}.zip .
+            - name: Create archive
+              run: tar -czf kstring-build${{ github.run_number }}-${{ steps.date.outputs.date }}.tar.gz -C artifact .
               shell: bash
 
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: kstring-build${{ github.run_number }}-${{ steps.date.outputs.date }}
-                  path: kstring-build${{ github.run_number }}-${{ steps.date.outputs.date }}.zip
+                  path: kstring-build${{ github.run_number }}-${{ steps.date.outputs.date }}.tar.gz
                   retention-days: 7
