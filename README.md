@@ -304,7 +304,7 @@ target_link_libraries(your_target PRIVATE KString::kstring_static)
 Default installation locations:
 
 - **Headers**: `${prefix}/include/KString.h`
-- **Libraries**: `${prefix}/lib/libkstring.{so,dylib,a}`
+- **Libraries**: `${prefix}/lib/libkstring.{so,dylib,dll}` (shared), `${prefix}/lib/libkstring.a` or `${prefix}/lib/kstring.lib` (static)
 - **CMake config**: `${prefix}/lib/cmake/KString/`
 - **pkg-config**: `${prefix}/lib/pkgconfig/kstring.pc`
 
@@ -316,7 +316,7 @@ cmake --install build --prefix /opt/kstring
 
 ## Build Requirements
 
-- **CMake 4.0+**: Modern CMake configuration
+- **CMake 3.30+**: Modern CMake configuration
 - **C23 Compiler**: GCC, Clang, or MSVC with C23 support
 - **Ninja**: Fast parallel builds (recommended)
 
@@ -324,9 +324,9 @@ cmake --install build --prefix /opt/kstring
 
 | Platform | Shared Library | Static Library | Status |
 |----------|---------------|----------------|---------|
-| Linux | `libkstring.so` | `libkstring_static.a` | ✅ Tested |
-| macOS | `libkstring.dylib` | `libkstring_static.a` | ✅ Tested |
-| Windows | `kstring.dll` | `kstring_static.lib` | ✅ Supported |
+| Linux | `libkstring.so` | `libkstring.a` | ✅ Tested |
+| macOS | `libkstring.dylib` | `libkstring.a` | ✅ Tested |
+| Windows | `kstring.dll` | `kstring.lib` | ✅ Supported |
 
 ## Project Structure
 
