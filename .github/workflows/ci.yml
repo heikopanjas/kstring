@@ -23,44 +23,22 @@ jobs:
                     - os: ubuntu-latest
                       platform_name: Linux
                       platform_id: linux
+                      cmake_generator: 'Unix Makefiles'
                     - os: macos-latest
                       platform_name: macOS
                       platform_id: darwin
+                      cmake_generator: 'Unix Makefiles'
                     - os: windows-latest
                       platform_name: Windows
                       platform_id: windows
+                      cmake_generator: 'Visual Studio 17 2022'
 
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
 
-            - name: Cache apt packages (Ubuntu)
-              if: matrix.os == 'ubuntu-latest'
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      /var/cache/apt/archives
-                      /var/lib/apt/lists
-                  key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/ci.yml') }}
-                  restore-keys: |
-                      ${{ runner.os }}-apt-
-
-            - name: Install Ninja (Ubuntu)
-              if: matrix.os == 'ubuntu-latest'
-              run: |
-                  sudo apt-get update -qq
-                  sudo apt-get install -y -qq ninja-build
-
-            - name: Install Ninja (macOS)
-              if: matrix.os == 'macos-latest'
-              run: brew install ninja
-
-            - name: Install Ninja (Windows)
-              if: matrix.os == 'windows-latest'
-              run: choco install ninja
-
             - name: Configure CMake
-              run: cmake -GNinja -B_build -DCMAKE_BUILD_TYPE=Release
+              run: cmake -G "${{ matrix.cmake_generator }}" -B_build -DCMAKE_BUILD_TYPE=Release
 
             - name: Build
               run: cmake --build _build --config Release
