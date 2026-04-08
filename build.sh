@@ -152,7 +152,7 @@ configure_project() {
         -G "$GENERATOR"
         -B "$BUILD_DIR"
         -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
-        -DBUILD_EXAMPLES=ON
+        -DKSTRING_BUILD_EXAMPLES=ON
     )
 
     if [[ "$RUN_TESTS" == true ]]; then

@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.30)
 
 # Project name and version
-project(KString VERSION 1.0.0 LANGUAGES C)
+project(KString VERSION 0.1.0 LANGUAGES C)
 
 # Use standard installation directories
 include(GNUInstallDirs)
@@ -152,8 +152,8 @@ install(FILES
 )
 
 # Optional: Build examples
-option(BUILD_EXAMPLES "Build examples" OFF)
-if(BUILD_EXAMPLES)
+option(KSTRING_BUILD_EXAMPLES "Build example programs" ON)
+if(KSTRING_BUILD_EXAMPLES)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/_examples")
         add_subdirectory(_examples)
     endif()

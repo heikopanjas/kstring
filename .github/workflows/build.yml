@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - develop
+      - 'feature/**'
+
+jobs:
+  build:
+    name: ${{ matrix.platform_name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            platform_name: Linux
+            platform_id: linux
+            cmake_generator: 'Unix Makefiles'
+          - os: macos-latest
+            platform_name: macOS
+            platform_id: darwin
+            cmake_generator: 'Unix Makefiles'
+          - os: windows-latest
+            platform_name: Windows
+            platform_id: windows
+            cmake_generator: 'Visual Studio 17 2022'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -G "${{ matrix.cmake_generator }}" -B _build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build _build --config Release
+
+      - name: Install to staging directory
+        run: cmake --install _build --prefix _staging --config Release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kstring-${{ matrix.platform_id }}
+          path: _staging/
+          retention-days: 7

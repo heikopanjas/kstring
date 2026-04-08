@@ -1,6 +1,6 @@
 # KString Library - Copilot Instructions
 
-**Last updated:** October 11, 2025
+**Last updated:** April 8, 2026
 
 ## Project Overview
 
@@ -9,6 +9,7 @@ KString is a high-performance C library implementing "Kraut Strings" - a special
 ## Naming Convention
 
 **"Kraut Strings"** is our implementation name for what the research literature calls "German Strings":
+
 - **Research Name**: "German Strings" (from Umbra database system and CedarDB)
 - **Our Implementation**: "Kraut Strings" (KString library)
 - **Why "Kraut"**: A playful, memorable name while honoring the German origins of this string optimization
@@ -28,6 +29,7 @@ KString is a high-performance C library implementing "Kraut Strings" - a special
 Based on research from Umbra database system and CedarDB, the KString implements:
 
 ### Core Design Principles
+
 1. **16-byte Fixed Size**: Entire string representation fits in 128 bits
 2. **Two Representations**:
    - **Short strings (≤12 chars)**: 30-bit length + 2-bit encoding + 96-bit inline content
@@ -38,12 +40,14 @@ Based on research from Umbra database system and CedarDB, the KString implements
 6. **Register Passing**: 16-byte limit enables CPU register-based function calls
 
 ### Character Encodings
+
 - **UTF-8**: Default Unicode encoding (00)
 - **UTF-16LE**: UTF-16 Little Endian for Windows compatibility (01)
 - **UTF-16BE**: UTF-16 Big Endian for network protocols (10)
 - **ANSI**: Windows-1252 for legacy Windows systems (11)
 
 ### Performance Optimizations
+
 - **Memory Efficiency**: 33% memory savings vs std::string (16 vs 24 bytes)
 - **Fast Prefix Comparisons**: Compare first 4 chars without pointer dereference
 - **Short String Optimization**: Strings ≤12 chars stored entirely inline
@@ -52,6 +56,7 @@ Based on research from Umbra database system and CedarDB, the KString implements
 - **Encoding Awareness**: Zero-overhead encoding detection via inline storage
 
 ### Storage Classes (Long Strings)
+
 - **Persistent**: Valid forever (string literals, constants)
 - **Transient**: Temporarily valid (may become invalid)
 - **Temporary**: Created during execution (requires cleanup)
@@ -59,6 +64,7 @@ Based on research from Umbra database system and CedarDB, the KString implements
 ## Architecture
 
 ### Directory Structure
+
 ```
 KString/
 ├── CMakeLists.txt           # Main build configuration
@@ -114,6 +120,7 @@ KString/
 ## Technical Requirements
 
 ### Build System
+
 - **CMake 3.30+**: Modern CMake configuration with cross-platform support
 - **Multi-Platform**: Supports Linux, macOS, and Windows
 - **Ninja Generator**: Fast parallel builds (`cmake -GNinja -B_build`)
@@ -127,6 +134,7 @@ KString/
     - Windows: `kstring.lib`
 
 ### Coding Standards
+
 - **C17 Standard**: Use C17 standard for broad compiler compatibility including MSVC
 - **Const Correctness**: All KString input parameters are const to prevent accidental modification and improve maintainability
 - **Constant-Left Comparisons**: Always place constants on the left side of comparisons (e.g., `NULL == ptr`, `0 == value`)
@@ -147,12 +155,14 @@ KString/
 The library implements "Kraut Strings" based on the "German String" format from database research (Umbra/CedarDB):
 
 ### Key Research Insights
+
 - **String Prevalence**: Strings make up ~50% of data processed in real-world systems
 - **Short String Dominance**: Most strings are short (ISO codes, enums, IDs ≤12 chars)
 - **Read-Heavy Workloads**: Strings are read much more often than modified
 - **Prefix-Based Operations**: Many operations only need string prefixes (comparisons, sorting)
 
 ### Kraut String Benefits (from German String research)
+
 - **Space Savings**: 33% reduction in memory usage vs traditional string representations
 - **Function Call Efficiency**: 4 instructions vs 37 instructions for string comparisons
 - **Cache Performance**: Better cache locality due to compact representation
@@ -160,6 +170,7 @@ The library implements "Kraut Strings" based on the "German String" format from 
 - **Thread Safety**: Immutable design eliminates need for locking
 
 ### Performance Characteristics
+
 - **Best Case**: Short strings (≤12 chars) - zero pointer dereferences
 - **Optimized Case**: Long string prefix comparisons - single register comparison
 - **Trade-off**: String modification is expensive (requires reallocation)
@@ -168,11 +179,13 @@ The library implements "Kraut Strings" based on the "German String" format from 
 ## Platform Support
 
 ### Supported Platforms
+
 - **Linux**: GCC/Clang with glibc
 - **macOS**: Clang with system libraries
 - **Windows**: MSVC, MinGW, or Clang
 
 ### Platform-Specific Considerations
+
 - **File Extensions**: CMake automatically handles platform-specific library extensions
 - **Compiler Differences**: Use feature detection for platform-specific optimizations
 - **Character Encoding**: Ensure consistent UTF-8 handling across platforms
@@ -180,6 +193,7 @@ The library implements "Kraut Strings" based on the "German String" format from 
 - **Export Symbols**: Use proper symbol visibility on Windows (DLL export/import)
 
 ### Cross-Platform Guidelines
+
 - Use standard C17 features only
 - Avoid platform-specific system calls
 - Use CMake for build configuration portability
@@ -189,6 +203,7 @@ The library implements "Kraut Strings" based on the "German String" format from 
 ## German String Research Context
 
 The library is based on research about German string handling in database systems. Key insights:
+
 - German strings are often longer due to compound words
 - Special characters require careful encoding handling
 - Database systems use specialized string representations for German text
@@ -197,6 +212,7 @@ The library is based on research about German string handling in database system
 ## Implementation Guidelines
 
 ### KString Structure (16 bytes total)
+
 ```c
 typedef struct KString {
     uint32_t size;        // 30-bit size (max ~1GB) + 2-bit encoding
@@ -216,6 +232,7 @@ typedef struct KString {
 **Note**: The size field uses 30 bits for string length (max ~1GB) and 2 bits for character encoding. All public API functions use `size_t` for size parameters and return values to follow standard C conventions.
 
 ### Character Encodings
+
 ```c
 typedef enum {
     KSTRING_ENCODING_UTF8     = 0,  // Default UTF-8 encoding
@@ -226,6 +243,7 @@ typedef enum {
 ```
 
 ### Storage Classes (for long strings)
+
 ```c
 typedef enum {
     KSTRING_PERSISTENT = 0,  // Valid forever (literals, constants)
@@ -235,6 +253,7 @@ typedef enum {
 ```
 
 ### Function Signatures
+
 ```c
 // Core operations (secure API - requires explicit size)
 KString KStringCreate(const char* pStr, const size_t Size);           // Size = count of bytes (UTF-8 default)
@@ -269,6 +288,7 @@ KString KStringSubstring(const KString str, const size_t start, const size_t len
 ```
 
 ### Key Implementation Rules
+
 1. **Pass by Value**: KString is exactly 16 bytes - pass by value for register efficiency
 2. **Size Extraction**: Always use GetSizeFromField() to extract 30-bit size from size field
 3. **Encoding Preservation**: String operations inherit encoding from source strings
@@ -280,6 +300,7 @@ KString KStringSubstring(const KString str, const size_t start, const size_t len
 ### Critical Implementation Details
 
 #### Size Field Bit Layout (32 bits total)
+
 ```c
 #define KSTRING_SIZE_MASK         0x3FFFFFFF  // 30-bit size mask (max ~1GB)
 #define KSTRING_ENCODING_MASK     0xC0000000  // 2-bit encoding mask
@@ -292,6 +313,7 @@ static inline uint32_t CreateSizeField(size_t Size, KStringEncoding Encoding);
 ```
 
 #### Short String Detection
+
 ```c
 #define KSTRING_MAX_SHORT_LENGTH 12
 static inline bool is_short_string(KString kstr) {
@@ -300,11 +322,13 @@ static inline bool is_short_string(KString kstr) {
 ```
 
 #### Pointer Tagging (Long Strings)
+
 - Use upper 2 bits of 64-bit pointer for storage class
 - Mask out tag bits before dereferencing: `ptr & 0x3FFFFFFFFFFFFFFF`
 - Storage class: `(ptr >> 62) & 0x3`
 
 #### Fast Comparison Strategy
+
 1. Extract actual size from both strings using GetSizeFromField()
 2. Compare sizes (30-bit integer comparison)
 3. If different sizes → not equal
@@ -313,11 +337,13 @@ static inline bool is_short_string(KString kstr) {
 6. Only then compare full content if needed
 
 #### Memory Layout Considerations
+
 - Ensure 16-byte alignment for optimal register usage
 - Use `static_assert(sizeof(KString) == 16)` to verify size
 - Consider endianness for cross-platform compatibility
 
 #### API Design Standards
+
 - **Always use `size_t`** for size and size parameters in public functions
 - **Always use `size_t`** for size and size return values
 - Internal structure uses 30-bit size field (max ~1GB strings) + 2-bit encoding
@@ -327,12 +353,14 @@ static inline bool is_short_string(KString kstr) {
 - Default encoding is UTF-8 for all creation functions without explicit encoding
 
 ### Error Handling
+
 - Return invalid KString (length = UINT32_MAX) for allocation failures
 - Use defensive programming (check parameters)
 - Document error conditions clearly
 - No exceptions (pure C)
 
 ### Memory Management
+
 - Caller responsible for calling `KStringDestroy()`
 - Functions that return `KString*` transfer ownership
 - Functions that take `const KString*` do not modify input
@@ -342,11 +370,13 @@ static inline bool is_short_string(KString kstr) {
 ## Testing Strategy
 
 ### Example Program
+
 - `_examples/main.c` demonstrates basic usage
 - Should be updated as new features are implemented
 - Serves as both demo and basic integration test
 
 ### Future Testing
+
 - Unit tests for each function
 - Performance benchmarks
 - German text-specific test cases
@@ -355,9 +385,11 @@ static inline bool is_short_string(KString kstr) {
 ## Build Commands
 
 ### Recommended: Build Scripts (Easy)
+
 The project includes comprehensive build scripts for all platforms:
 
 **Linux/macOS:**
+
 ```bash
 ./build.sh              # Standard release build
 ./build.sh --help       # Show all options
@@ -367,6 +399,7 @@ The project includes comprehensive build scripts for all platforms:
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 .\build.ps1              # Standard release build
 .\build.ps1 -Help        # Show all options
@@ -376,6 +409,7 @@ The project includes comprehensive build scripts for all platforms:
 ```
 
 **Build Script Options:**
+
 - `-c, --clean` / `-Clean`: Clean build directory before building
 - `-d, --debug` / `-Debug`: Build in Debug mode (default: Release)
 - `-v, --verbose` / `-Verbose`: Enable verbose build output
@@ -387,6 +421,7 @@ The project includes comprehensive build scripts for all platforms:
 ### Manual CMake Commands
 
 **All Platforms:**
+
 ```bash
 # Configure build
 cmake -GNinja -B_build
@@ -400,6 +435,7 @@ _build\_examples\kstring_demo.exe     # Windows
 ```
 
 **Platform-Specific Clean Rebuild:**
+
 ```bash
 # Linux/macOS
 rm -rf _build && cmake -GNinja -B_build && cmake --build _build
@@ -412,6 +448,7 @@ rmdir /s /q _build && cmake -GNinja -B_build && cmake --build _build
 ```
 
 ### Generated Libraries
+
 - **Linux**: `_build/libkstring.so`, `_build/libkstring.a`
 - **macOS**: `_build/libkstring.dylib`, `_build/libkstring.a`
 - **Windows**: `_build/kstring.dll`, `_build/kstring.lib`
@@ -424,15 +461,18 @@ rmdir /s /q _build && cmake -GNinja -B_build && cmake --build _build
 4. **Document**: Keep this file updated with implementation details
 
 ### **Commit Policy - CRITICAL**
+
 **NEVER commit automatically** - Always wait for explicit "commit the changes" instruction.
 
 **Why NEVER Commit Automatically:**
+
 1. **Review Opportunity**: User needs chance to review changes before they're committed
 2. **Repository Stability**: Auto-committing can leave the repository in an unstable state
 3. **Documentation Sync**: Updating copilot instructions after committing code changes creates inconsistency
 4. **User Control**: User maintains full control over what gets committed and when
 
 **Correct Workflow:**
+
 1. Make code changes when requested
 2. Verify changes work (build, test)
 3. **STOP** - Wait for explicit "commit the changes" instruction
@@ -544,6 +584,7 @@ fix: update `KString` with "nested 'quotes'" & $special chars!
 ## About the Name "Kraut Strings"
 
 **Why "Kraut" instead of "German"?**
+
 - **Memorable Branding**: "Kraut Strings" is more distinctive and memorable than "German Strings"
 - **Playful Homage**: Honors the German origins of this optimization in a lighthearted way
 - **Technical Accuracy**: KString implements the exact same specifications as German Strings from research
@@ -560,7 +601,53 @@ fix: update `KString` with "nested 'quotes'" & $special chars!
 - SIMD optimizations for string operations
 - Integration with popular C frameworks
 
+## Semantic Versioning Protocol
+
+**AUTOMATICALLY track version changes using semantic versioning (SemVer) in CMakeLists.txt.**
+
+The current version is defined in `CMakeLists.txt` under the `project()` command as `project(KString VERSION X.Y.Z LANGUAGES C)`.
+
+### Version Format: MAJOR.MINOR.PATCH
+
+**When to increment:**
+
+1. **PATCH version** (X.Y.Z → X.Y.Z+1)
+   - Bug fixes and minor corrections
+   - Performance improvements without API changes
+   - Documentation updates
+   - Internal refactoring that doesn't affect public API
+   - Example: `1.0.0` → `1.0.1`
+
+2. **MINOR version** (X.Y.Z → X.Y+1.0)
+   - New features added
+   - New API functions or parameters
+   - New functionality that maintains backward compatibility
+   - Example: `1.0.1` → `1.1.0`
+
+3. **MAJOR version** (X.Y.Z → X+1.0.0)
+   - Breaking changes to public API
+   - Removal of functions or parameters
+   - Changes that require user action or code updates
+   - Incompatible API changes
+   - Example: `1.1.0` → `2.0.0`
+
+### Process
+
+After making ANY code changes:
+
+1. Determine the type of change (fix, feature, or breaking change)
+2. Update the version in `CMakeLists.txt` accordingly
+3. Include the version change in the same commit as the code change
+4. Mention version bump in commit message footer if significant
+
+**Note:** Version changes should be included in the commit with the actual code changes, not as a separate commit. Load the `semantic-versioning` skill for the full PATCH/MINOR/MAJOR decision rules.
+
 ## Recent Updates & Decisions
+
+### April 8, 2026
+
+- **Semantic Versioning Protocol added**: Adopted SemVer protocol from vibe-cop project, adapted for C/CMake. Version is tracked in CMakeLists.txt project() command. PATCH for fixes, MINOR for new features, MAJOR for breaking API changes. Version bumps must be included in the same commit as the code change. Created dedicated skill at .cursor/skills/semantic-versioning/SKILL.md for agent reference.
+- **GitHub Actions workflows restructured**: Renamed ci.yml to build.yml for clarity. Added release.yml placeholder for future release automation on PRs to main. Reworked build.yml to use cmake --install for reliable cross-platform artifact collection of both static and shared libraries.
 
 ### October 11, 2025
 
@@ -572,7 +659,7 @@ fix: update `KString` with "nested 'quotes'" & $special chars!
 
 ### September 25, 2025
 
-- **Memory safety and code consistency enhancements**: Completed major refactoring of KString.c implementation with standardized KS_ prefix for all private functions, enhanced memory safety through KS_Release() function, comprehensive pointer validation, arithmetic overflow protection, and improved bounds checking. This strengthens the library's robustness while maintaining the 16-byte German String optimization specifications (commit bdb838d).
+- **Memory safety and code consistency enhancements**: Completed major refactoring of KString.c implementation with standardized KS_prefix for all private functions, enhanced memory safety through KS_Release() function, comprehensive pointer validation, arithmetic overflow protection, and improved bounds checking. This strengthens the library's robustness while maintaining the 16-byte German String optimization specifications (commit bdb838d).
 - **Copilot instructions confirmed and analyzed**: Reviewed complete project structure, confirmed understanding of Kraut Strings implementation based on German String research, and validated current codebase status. Project has solid foundation with complete API definition, partial implementation, working build system, and example program.
 
 ### September 18, 2025

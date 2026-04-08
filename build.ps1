@@ -119,7 +119,7 @@ function Invoke-Configure {
         "-G", $Generator,
         "-B", $BuildDir,
         "-DCMAKE_BUILD_TYPE=$BuildType",
-        "-DBUILD_EXAMPLES=ON"
+        "-DKSTRING_BUILD_EXAMPLES=ON"
     )
 
     if ($Test) {
