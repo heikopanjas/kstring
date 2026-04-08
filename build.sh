@@ -156,7 +156,7 @@ configure_project() {
     )
 
     if [[ "$RUN_TESTS" == true ]]; then
-        CMAKE_ARGS+=(-DBUILD_TESTS=ON)
+        CMAKE_ARGS+=(-DKSTRING_BUILD_TESTS=ON)
     fi
 
     if [[ "$VERBOSE" == true ]]; then

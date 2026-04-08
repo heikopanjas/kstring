@@ -46,10 +46,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Configure
-        run: cmake -G "${{ matrix.cmake_generator }}" -B _build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }} -DKSTRING_BUILD_EXAMPLES=OFF
+        run: cmake -G "${{ matrix.cmake_generator }}" -B _build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }} -DKSTRING_BUILD_EXAMPLES=OFF -DKSTRING_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build _build --config Release
+
+      - name: Test
+        run: ctest --test-dir _build --output-on-failure -C Release
 
       - name: Install to staging directory
         run: cmake --install _build --prefix _staging --config Release

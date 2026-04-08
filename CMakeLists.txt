@@ -141,3 +141,10 @@ if(KSTRING_BUILD_EXAMPLES)
         add_subdirectory(_examples)
     endif()
 endif()
+
+# Optional: Build tests
+option(KSTRING_BUILD_TESTS "Build unit tests" OFF)
+if(KSTRING_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(_tests)
+endif()

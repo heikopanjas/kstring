@@ -123,7 +123,7 @@ function Invoke-Configure {
     )
 
     if ($Test) {
-        $cmakeArgs += "-DBUILD_TESTS=ON"
+        $cmakeArgs += "-DKSTRING_BUILD_TESTS=ON"
     }
 
     if ($Verbose) {
