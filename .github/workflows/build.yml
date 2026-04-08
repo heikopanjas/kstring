@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure
         run: cmake -G "${{ matrix.cmake_generator }}" -B _build -DCMAKE_BUILD_TYPE=Release -DKSTRING_BUILD_EXAMPLES=OFF
@@ -53,7 +53,7 @@ jobs:
         shell: bash
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kstring-${{ matrix.platform_id }}
           path: kstring-${{ matrix.platform_id }}.tar.gz
@@ -69,7 +69,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -133,7 +133,7 @@ jobs:
           cat changelog.md
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
