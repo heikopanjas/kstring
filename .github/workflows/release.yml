@@ -12,8 +12,24 @@ on:
       - main
 
 jobs:
+  version:
+    name: Extract Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Extract version from CMakeLists.txt
+        id: version
+        run: |
+          version=$(grep 'project(KString VERSION' CMakeLists.txt | sed 's/.*VERSION \([^ ]*\).*/\1/')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
   build:
     name: ${{ matrix.platform_name }} (${{ matrix.lib_type }})
+    needs: version
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -55,19 +71,19 @@ jobs:
       - name: Create archive
         run: |
           cd _staging
-          tar -czf ../kstring-${{ matrix.target }}-${{ matrix.lib_type }}.tar.gz .
+          tar -czf ../kstring-${{ needs.version.outputs.version }}-${{ matrix.target }}-${{ matrix.lib_type }}.tar.gz .
         shell: bash
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: kstring-${{ matrix.target }}-${{ matrix.lib_type }}
-          path: kstring-${{ matrix.target }}-${{ matrix.lib_type }}.tar.gz
+          name: kstring-${{ needs.version.outputs.version }}-${{ matrix.target }}-${{ matrix.lib_type }}
+          path: kstring-${{ needs.version.outputs.version }}-${{ matrix.target }}-${{ matrix.lib_type }}.tar.gz
           retention-days: 90
 
   release:
     name: Create Release
-    needs: build
+    needs: [version, build]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -79,11 +95,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract version
+      - name: Extract build info
         id: info
         run: |
-          version=$(grep 'project(KString VERSION' CMakeLists.txt | sed 's/.*VERSION \([^ ]*\).*/\1/')
-          echo "version=$version" >> $GITHUB_OUTPUT
           echo "date=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
           echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
@@ -112,7 +126,7 @@ jobs:
           }
 
           {
-            echo "**Version:** ${{ steps.info.outputs.version }}"
+            echo "**Version:** ${{ needs.version.outputs.version }}"
             echo "**Date:** ${{ steps.info.outputs.date }}"
             echo "**Commit:** [\`${{ steps.info.outputs.short_sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})"
             echo ""
@@ -146,16 +160,16 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.info.outputs.version }}
-          name: v${{ steps.info.outputs.version }}
+          tag_name: v${{ needs.version.outputs.version }}
+          name: v${{ needs.version.outputs.version }}
           prerelease: false
           draft: false
           make_latest: true
           body_path: changelog.md
           files: |
-            artifacts/kstring-x86_64-linux-gnu-shared/kstring-x86_64-linux-gnu-shared.tar.gz
-            artifacts/kstring-x86_64-linux-gnu-static/kstring-x86_64-linux-gnu-static.tar.gz
-            artifacts/kstring-aarch64-darwin-shared/kstring-aarch64-darwin-shared.tar.gz
-            artifacts/kstring-aarch64-darwin-static/kstring-aarch64-darwin-static.tar.gz
-            artifacts/kstring-x86_64-windows-msvc-shared/kstring-x86_64-windows-msvc-shared.tar.gz
-            artifacts/kstring-x86_64-windows-msvc-static/kstring-x86_64-windows-msvc-static.tar.gz
+            artifacts/kstring-${{ needs.version.outputs.version }}-x86_64-linux-gnu-shared/kstring-${{ needs.version.outputs.version }}-x86_64-linux-gnu-shared.tar.gz
+            artifacts/kstring-${{ needs.version.outputs.version }}-x86_64-linux-gnu-static/kstring-${{ needs.version.outputs.version }}-x86_64-linux-gnu-static.tar.gz
+            artifacts/kstring-${{ needs.version.outputs.version }}-aarch64-darwin-shared/kstring-${{ needs.version.outputs.version }}-aarch64-darwin-shared.tar.gz
+            artifacts/kstring-${{ needs.version.outputs.version }}-aarch64-darwin-static/kstring-${{ needs.version.outputs.version }}-aarch64-darwin-static.tar.gz
+            artifacts/kstring-${{ needs.version.outputs.version }}-x86_64-windows-msvc-shared/kstring-${{ needs.version.outputs.version }}-x86_64-windows-msvc-shared.tar.gz
+            artifacts/kstring-${{ needs.version.outputs.version }}-x86_64-windows-msvc-static/kstring-${{ needs.version.outputs.version }}-x86_64-windows-msvc-static.tar.gz
