@@ -75,6 +75,10 @@ KString/
 ├── _examples/
 │   ├── CMakeLists.txt      # Example build configuration
 │   └── main.c              # Demo program
+├── ports/
+│   └── kstring/            # vcpkg overlay port
+│       ├── vcpkg.json      # Package manifest
+│       └── portfile.cmake  # Build recipe
 ├── _research/              # Research papers and documentation
 └── _build/                 # Build artifacts (generated)
 ```
@@ -124,14 +128,13 @@ KString/
 - **CMake 3.30+**: Modern CMake configuration with cross-platform support
 - **Multi-Platform**: Supports Linux, macOS, and Windows
 - **Ninja Generator**: Fast parallel builds (`cmake -GNinja -B_build`)
-- **Library Types**:
-  - **Shared Library**:
-    - Linux: `libkstring.so`
-    - macOS: `libkstring.dylib`
-    - Windows: `kstring.dll`
-  - **Static Library**:
-    - Linux/macOS: `libkstring.a`
-    - Windows: `kstring.lib`
+- **Single Target Build**: Library type controlled by `BUILD_SHARED_LIBS` (default: ON)
+  - Shared: `cmake -B_build -DBUILD_SHARED_LIBS=ON`
+  - Static: `cmake -B_build -DBUILD_SHARED_LIBS=OFF`
+- **Library Output**:
+  - **Shared Library**: `libkstring.so` (Linux), `libkstring.dylib` (macOS), `kstring.dll` (Windows)
+  - **Static Library**: `libkstring.a` (Linux/macOS), `kstring.lib` (Windows)
+- **vcpkg Support**: Overlay port files in `ports/kstring/` for vcpkg integration (triplet controls shared/static)
 
 ### Coding Standards
 
@@ -646,8 +649,10 @@ After making ANY code changes:
 
 ### April 8, 2026
 
+- **Single-target build with BUILD_SHARED_LIBS**: Refactored CMakeLists.txt from dual-target (kstring + kstring_static) to single-target approach where BUILD_SHARED_LIBS controls library type. This follows industry best practice used by vcpkg, Conan, and major C libraries. Each build produces one library type, CI builds both variants per platform (6 total).
+- **vcpkg overlay port added**: Created ports/kstring/ with vcpkg.json manifest and portfile.cmake build recipe. Consumers can use KString via vcpkg with --overlay-ports, triplet controls shared/static selection automatically.
 - **Semantic Versioning Protocol added**: Adopted SemVer protocol from vibe-cop project, adapted for C/CMake. Version is tracked in CMakeLists.txt project() command. PATCH for fixes, MINOR for new features, MAJOR for breaking API changes. Version bumps must be included in the same commit as the code change. Created dedicated skill at .cursor/skills/semantic-versioning/SKILL.md for agent reference.
-- **GitHub Actions workflows restructured**: Renamed ci.yml to build.yml for clarity. Added release.yml placeholder for future release automation on PRs to main. Reworked build.yml to use cmake --install for reliable cross-platform artifact collection of both static and shared libraries.
+- **GitHub Actions workflows restructured**: Renamed ci.yml to build.yml for clarity. Added release.yml placeholder for future release automation on PRs to main. Build workflow produces per-platform per-linkage artifacts with auto-generated changelog and pre-releases on develop branch.
 
 ### October 11, 2025
 

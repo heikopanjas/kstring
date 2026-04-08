@@ -52,51 +52,34 @@ set(KSTRING_HEADERS
     include/KString.h
 )
 
-# Create shared library
-add_library(kstring SHARED ${KSTRING_SOURCES} ${KSTRING_HEADERS})
+# Library type controlled by BUILD_SHARED_LIBS (default: shared)
+option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
 
-# Create static library
-add_library(kstring_static STATIC ${KSTRING_SOURCES} ${KSTRING_HEADERS})
+add_library(kstring ${KSTRING_SOURCES} ${KSTRING_HEADERS})
 
-# Set output name for static library
-set_target_properties(kstring_static PROPERTIES OUTPUT_NAME kstring)
-
-# Add alias targets for FetchContent usage
+# Add alias target for FetchContent usage
 add_library(KString::kstring ALIAS kstring)
-add_library(KString::kstring_static ALIAS kstring_static)
 
-# Set library properties for shared library
+# Set library properties
 set_target_properties(kstring PROPERTIES
     VERSION ${PROJECT_VERSION}
-    SOVERSION 1
     PUBLIC_HEADER "${KSTRING_HEADERS}"
     C_STANDARD 17
     C_STANDARD_REQUIRED ON
 )
 
-# Set library properties for static library
-set_target_properties(kstring_static PROPERTIES
-    VERSION ${PROJECT_VERSION}
-    PUBLIC_HEADER "${KSTRING_HEADERS}"
-    C_STANDARD 17
-    C_STANDARD_REQUIRED ON
-)
+if(BUILD_SHARED_LIBS)
+    set_target_properties(kstring PROPERTIES SOVERSION 1)
+endif()
 
-# Configure include directories for both targets
 target_include_directories(kstring
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-target_include_directories(kstring_static
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-
-# Installation rules for targets
-install(TARGETS kstring kstring_static
+# Installation rules
+install(TARGETS kstring
     EXPORT KStringTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

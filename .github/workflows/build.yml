@@ -15,13 +15,14 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.platform_name }}
+    name: ${{ matrix.platform_name }} (${{ matrix.lib_type }})
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        lib_type: [shared, static]
         include:
           - os: ubuntu-latest
             platform_name: Linux
@@ -35,13 +36,17 @@ jobs:
             platform_name: Windows
             platform_id: windows
             cmake_generator: 'Visual Studio 17 2022'
+          - lib_type: shared
+            shared_libs: 'ON'
+          - lib_type: static
+            shared_libs: 'OFF'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
       - name: Configure
-        run: cmake -G "${{ matrix.cmake_generator }}" -B _build -DCMAKE_BUILD_TYPE=Release -DKSTRING_BUILD_EXAMPLES=OFF
+        run: cmake -G "${{ matrix.cmake_generator }}" -B _build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }} -DKSTRING_BUILD_EXAMPLES=OFF
 
       - name: Build
         run: cmake --build _build --config Release
@@ -52,14 +57,14 @@ jobs:
       - name: Create archive
         run: |
           cd _staging
-          tar -czf ../kstring-${{ matrix.platform_id }}.tar.gz .
+          tar -czf ../kstring-${{ matrix.platform_id }}-${{ matrix.lib_type }}.tar.gz .
         shell: bash
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: kstring-${{ matrix.platform_id }}
-          path: kstring-${{ matrix.platform_id }}.tar.gz
+          name: kstring-${{ matrix.platform_id }}-${{ matrix.lib_type }}
+          path: kstring-${{ matrix.platform_id }}-${{ matrix.lib_type }}.tar.gz
           retention-days: 7
 
   release:
@@ -150,6 +155,9 @@ jobs:
           make_latest: false
           body_path: changelog.md
           files: |
-            artifacts/kstring-linux/kstring-linux.tar.gz
-            artifacts/kstring-darwin/kstring-darwin.tar.gz
-            artifacts/kstring-windows/kstring-windows.tar.gz
+            artifacts/kstring-linux-shared/kstring-linux-shared.tar.gz
+            artifacts/kstring-linux-static/kstring-linux-static.tar.gz
+            artifacts/kstring-darwin-shared/kstring-darwin-shared.tar.gz
+            artifacts/kstring-darwin-static/kstring-darwin-static.tar.gz
+            artifacts/kstring-windows-shared/kstring-windows-shared.tar.gz
+            artifacts/kstring-windows-static/kstring-windows-static.tar.gz
