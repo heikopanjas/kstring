@@ -1,15 +1,161 @@
 name: Release
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
 
 jobs:
-  release:
-    name: Release
-    runs-on: ubuntu-latest
+  build:
+    name: ${{ matrix.platform_name }} (${{ matrix.lib_type }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        lib_type: [shared, static]
+        include:
+          - os: ubuntu-latest
+            platform_name: Linux
+            target: x86_64-linux-gnu
+            cmake_generator: 'Unix Makefiles'
+          - os: macos-latest
+            platform_name: macOS
+            target: aarch64-darwin
+            cmake_generator: 'Unix Makefiles'
+          - os: windows-latest
+            platform_name: Windows
+            target: x86_64-windows-msvc
+            cmake_generator: 'Visual Studio 17 2022'
+          - lib_type: shared
+            shared_libs: 'ON'
+          - lib_type: static
+            shared_libs: 'OFF'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
+      - name: Configure
+        run: cmake -G "${{ matrix.cmake_generator }}" -B _build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }} -DKSTRING_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build _build --config Release
+
+      - name: Install to staging directory
+        run: cmake --install _build --prefix _staging --config Release
+
+      - name: Create archive
+        run: |
+          cd _staging
+          tar -czf ../kstring-${{ matrix.target }}-${{ matrix.lib_type }}.tar.gz .
+        shell: bash
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: kstring-${{ matrix.target }}-${{ matrix.lib_type }}
+          path: kstring-${{ matrix.target }}-${{ matrix.lib_type }}.tar.gz
+          retention-days: 90
+
+  release:
+    name: Create Release
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: info
+        run: |
+          version=$(grep 'project(KString VERSION' CMakeLists.txt | sed 's/.*VERSION \([^ ]*\).*/\1/')
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        run: |
+          PREV_TAG=$(git tag --sort=-creatordate | grep '^v[0-9]' | head -1 2>/dev/null || true)
+
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..HEAD"
+            SINCE="since \`$PREV_TAG\`"
+          else
+            RANGE="HEAD"
+            SINCE="(initial release)"
+          fi
+
+          generate_section() {
+            local title="$1"
+            local pattern="$2"
+            local commits
+            commits=$(git log ${RANGE} --pretty=format:"- %s (%h)" --no-merges | grep -E "^- ${pattern}" || true)
+            if [ -n "$commits" ]; then
+              echo "### ${title}"
+              echo "${commits}"
+              echo ""
+            fi
+          }
+
+          {
+            echo "**Version:** ${{ steps.info.outputs.version }}"
+            echo "**Date:** ${{ steps.info.outputs.date }}"
+            echo "**Commit:** [\`${{ steps.info.outputs.short_sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})"
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Changelog ${SINCE}"
+            echo ""
+            generate_section "Features" "feat"
+            generate_section "Bug Fixes" "fix"
+            generate_section "Performance" "perf"
+            generate_section "Build & CI" "(build|ci)"
+            generate_section "Documentation" "docs"
+            generate_section "Refactoring" "refactor"
+            generate_section "Tests" "test"
+
+            OTHER=$(git log ${RANGE} --pretty=format:"- %s (%h)" --no-merges | grep -vE "^- (feat|fix|perf|build|ci|docs|refactor|test)" || true)
+            if [ -n "$OTHER" ]; then
+              echo "### Other"
+              echo "${OTHER}"
+              echo ""
+            fi
+          } > changelog.md
+
+          cat changelog.md
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.info.outputs.version }}
+          name: v${{ steps.info.outputs.version }}
+          prerelease: false
+          draft: false
+          make_latest: true
+          body_path: changelog.md
+          files: |
+            artifacts/kstring-x86_64-linux-gnu-shared/kstring-x86_64-linux-gnu-shared.tar.gz
+            artifacts/kstring-x86_64-linux-gnu-static/kstring-x86_64-linux-gnu-static.tar.gz
+            artifacts/kstring-aarch64-darwin-shared/kstring-aarch64-darwin-shared.tar.gz
+            artifacts/kstring-aarch64-darwin-static/kstring-aarch64-darwin-static.tar.gz
+            artifacts/kstring-x86_64-windows-msvc-shared/kstring-x86_64-windows-msvc-shared.tar.gz
+            artifacts/kstring-x86_64-windows-msvc-static/kstring-x86_64-windows-msvc-static.tar.gz
