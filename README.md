@@ -209,25 +209,135 @@ KString implements the "German String" format from database research:
 - **Trade-off**: String modification is expensive (requires reallocation)
 - **Limitation**: Maximum string size 4GB (32-bit size field)
 
+## Using KString in Your Project
+
+KString can be integrated into your CMake project using multiple methods:
+
+### Method 1: FetchContent (Recommended)
+
+The easiest way to use KString as a dependency:
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+    KString
+    GIT_REPOSITORY https://github.com/heikopanjas/kstring.git
+    GIT_TAG        v1.0.0  # or main for latest
+)
+
+FetchContent_MakeAvailable(KString)
+
+# Link against KString
+target_link_libraries(your_target PRIVATE KString::kstring)
+```
+
+**Example usage:**
+
+```c
+#include <KString.h>
+#include <stdio.h>
+
+int main(void) {
+    const char* text = "FetchContent works!";
+    KString str = KStringCreate(text, 19);
+    printf("%s\n", KStringCStr(str));
+    KStringDestroy(str);
+    return 0;
+}
+```
+
+### Method 2: find_package() (After Installation)
+
+First, install KString system-wide:
+
+```bash
+cmake -B build
+cmake --build build
+sudo cmake --install build
+```
+
+Then in your project:
+
+```cmake
+find_package(KString 1.0 REQUIRED)
+
+target_link_libraries(your_target PRIVATE KString::kstring)
+```
+
+### Method 3: add_subdirectory()
+
+If KString is a subdirectory in your project:
+
+```cmake
+add_subdirectory(external/kstring)
+
+target_link_libraries(your_target PRIVATE KString::kstring)
+```
+
+### Method 4: pkg-config
+
+For non-CMake projects, use pkg-config after installation:
+
+```bash
+# Compile your application
+gcc myapp.c $(pkg-config --cflags --libs kstring) -o myapp
+```
+
+Or in a Makefile:
+
+```makefile
+CFLAGS += $(shell pkg-config --cflags kstring)
+LDFLAGS += $(shell pkg-config --libs kstring)
+```
+
+### Choosing Between Shared and Static Library
+
+By default, `KString::kstring` links to the shared library. For the static library:
+
+```cmake
+target_link_libraries(your_target PRIVATE KString::kstring_static)
+```
+
+### Installation Paths
+
+Default installation locations:
+
+- **Headers**: `${prefix}/include/KString.h`
+- **Libraries**: `${prefix}/lib/libkstring.{so,dylib,dll}` (shared), `${prefix}/lib/libkstring.a` or `${prefix}/lib/kstring.lib` (static)
+- **CMake config**: `${prefix}/lib/cmake/KString/`
+- **pkg-config**: `${prefix}/lib/pkgconfig/kstring.pc`
+
+Customize with:
+
+```bash
+cmake --install build --prefix /opt/kstring
+```
+
 ## Build Requirements
 
-- **CMake 4.0+**: Modern CMake configuration
-- **C23 Compiler**: GCC, Clang, or MSVC with C23 support
+- **CMake 3.30+**: Modern CMake configuration
+- **C17 Compiler**: GCC, Clang, or MSVC with C17 support
 - **Ninja**: Fast parallel builds (recommended)
 
 ### Platform Support
 
 | Platform | Shared Library | Static Library | Status |
 |----------|---------------|----------------|---------|
-| Linux | `libkstring.so` | `libkstring_static.a` | ✅ Tested |
-| macOS | `libkstring.dylib` | `libkstring_static.a` | ✅ Tested |
-| Windows | `kstring.dll` | `kstring_static.lib` | ✅ Supported |
+| Linux | `libkstring.so` | `libkstring.a` | ✅ Tested |
+| macOS | `libkstring.dylib` | `libkstring.a` | ✅ Tested |
+| Windows | `kstring.dll` | `kstring.lib` | ✅ Supported |
 
 ## Project Structure
 
 ```text
 KString/
 ├── CMakeLists.txt           # Main build configuration
+├── build.sh                 # Build script (Linux/macOS)
+├── build.ps1                # Build script (Windows PowerShell)
+├── cmake/                   # CMake configuration files
+│   ├── kstring.pc.in       # pkg-config template
+│   └── KStringConfig.cmake.in # CMake config template
 ├── include/
 │   └── KString.h           # Public API header
 ├── src/
@@ -236,7 +346,9 @@ KString/
 │   ├── CMakeLists.txt      # Example build configuration
 │   └── main.c              # Demo program
 ├── _research/              # Research papers and documentation
-├── .copilot-instructions.md # Development guidelines
+├── .github/
+│   └── copilot-instructions.md # Copilot configuration
+├── AGENTS.md               # AI agent development guidelines
 └── README.md               # This file
 ```
 

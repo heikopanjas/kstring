@@ -1,21 +1,46 @@
-cmake_minimum_required(VERSION 4.0)
+##############################################################################
+#
+# MIT License
+#
+# Copyright (c) 2025 Heiko Panjas
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+##############################################################################
+
+cmake_minimum_required(VERSION 3.30)
 
 # Project name and version
-project(KString VERSION 1.0.0 LANGUAGES C)
+project(KString VERSION 0.1.0 LANGUAGES C)
+
+# Use standard installation directories
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # Set C standard
-set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Add compiler flags for better error checking
 if(MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
+    add_compile_options(/W4)
 else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic")
+    add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
-
-# Include directories
-include_directories(include)
 
 # Source files
 set(KSTRING_SOURCES
@@ -27,44 +52,91 @@ set(KSTRING_HEADERS
     include/KString.h
 )
 
-# Create the library
-add_library(kstring SHARED ${KSTRING_SOURCES} ${KSTRING_HEADERS})
+# Library type controlled by BUILD_SHARED_LIBS (default: shared)
+option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+
+add_library(kstring ${KSTRING_SOURCES} ${KSTRING_HEADERS})
+
+# Add alias target for FetchContent usage
+add_library(KString::kstring ALIAS kstring)
 
 # Set library properties
 set_target_properties(kstring PROPERTIES
     VERSION ${PROJECT_VERSION}
-    SOVERSION 1
-    PUBLIC_HEADER "include/KString.h"
+    PUBLIC_HEADER "${KSTRING_HEADERS}"
+    C_STANDARD 17
+    C_STANDARD_REQUIRED ON
 )
 
-# Platform-specific library naming (CMake handles this automatically)
-# Linux: libkstring.so, macOS: libkstring.dylib, Windows: kstring.dll
+if(BUILD_SHARED_LIBS)
+    set_target_properties(kstring PROPERTIES SOVERSION 1)
+endif()
+
+target_include_directories(kstring
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 
 # Installation rules
 install(TARGETS kstring
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin  # For Windows DLLs
-    PUBLIC_HEADER DESTINATION include
+    EXPORT KStringTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Optional: Create a static library as well
-add_library(kstring_static STATIC ${KSTRING_SOURCES} ${KSTRING_HEADERS})
-set_target_properties(kstring_static PROPERTIES OUTPUT_NAME kstring_static)
+# Export targets for use in build tree
+export(EXPORT KStringTargets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/KStringTargets.cmake"
+    NAMESPACE KString::
+)
 
-# Optional: Enable testing if you want to add tests later
-option(BUILD_TESTS "Build tests" OFF)
-if(BUILD_TESTS)
-    enable_testing()
-    # Add test subdirectory if it exists
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests")
-        add_subdirectory(tests)
-    endif()
-endif()
+# Install the export set
+install(EXPORT KStringTargets
+    FILE KStringTargets.cmake
+    NAMESPACE KString::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KString
+)
+
+# Generate package config file
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/KStringConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/KStringConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KString
+)
+
+# Generate version file
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/KStringConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+# Install package config files
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/KStringConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/KStringConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KString
+)
+
+# Generate pkg-config file
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/kstring.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/kstring.pc"
+    @ONLY
+)
+
+# Install pkg-config file
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/kstring.pc"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
 
 # Optional: Build examples
-option(BUILD_EXAMPLES "Build examples" ON)
-if(BUILD_EXAMPLES)
+option(KSTRING_BUILD_EXAMPLES "Build example programs" ON)
+if(KSTRING_BUILD_EXAMPLES)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/_examples")
         add_subdirectory(_examples)
     endif()
