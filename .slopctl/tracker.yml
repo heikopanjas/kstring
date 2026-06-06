@@ -1,0 +1,70 @@
+.agents/skills/git-workflow/SKILL.md:
+  original_sha: e725af4da5ee10630112f6bab5177dae1622346c43f5dc71cefc38495fa95c20
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.125615+00:00
+  lang: none
+  agent: all
+  category: skill
+AGENTS.md:
+  original_sha: 3d1915cb25ec03f2a9be5e9581378c539e5f2d796744fb35617e3e8cc74db6bd
+  template_version: 0
+  installed_date: 2026-06-06T14:34:17.023106+00:00
+  lang: none
+  agent: all
+  category: main
+.gitattributes:
+  original_sha: b06645d6d1fca42aa742230b5ea0875ba8b996198073db1872402a9ca7ac6356
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.124863+00:00
+  lang: none
+  agent: all
+  category: integration
+.editorconfig:
+  original_sha: a755fd5d8c5746c2b154269d98238e4b3f9347ce75b02ec5e7a59da9c6fa4303
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.124749+00:00
+  lang: c++
+  agent: all
+  category: language
+.agents/skills/cpp-coding-conventions/SKILL.md:
+  original_sha: a2d30ed38ea3f5be003eaee186ea2dff8e864e93db9f1b791c824b54fd7acd24
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.125459+00:00
+  lang: c++
+  agent: all
+  category: skill
+.cursor/commands/init-session.md:
+  original_sha: 21f4305fa05b0a465480784c61b7236343f613cd364236c3e9ca23e81d57ea53
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.125034+00:00
+  lang: none
+  agent: cursor
+  category: agent
+.agents/skills/cmake-build-commands/SKILL.md:
+  original_sha: a89c694d9cf4db3f29b46a807636a43c1b6b219c06e38266da1e623e0b22bd05
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.125306+00:00
+  lang: c++
+  agent: all
+  category: skill
+.agents/skills/semantic-versioning/SKILL.md:
+  original_sha: def35d0dbd880443f63d53f0081368bd7daa9c768f39e728862216f4de716413
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.125796+00:00
+  lang: none
+  agent: all
+  category: skill
+.clang-format:
+  original_sha: a7e2ca6bead68e878b98ccd079a7f92037e737e8e2e1c0cd73fcadf845eea6d3
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.124620+00:00
+  lang: c++
+  agent: all
+  category: language
+.gitignore:
+  original_sha: 8d34f5de6bece386131110afff2b7e046c3d1ebef4fe427e4e0cc8e41c2e7d9c
+  template_version: 5
+  installed_date: 2026-06-06T14:35:05.124486+00:00
+  lang: c++
+  agent: all
+  category: integration
