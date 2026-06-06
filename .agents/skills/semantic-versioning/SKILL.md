@@ -1,3 +1,12 @@
+---
+name: semantic-versioning
+description: Rules for when to increment PATCH, MINOR, or MAJOR version numbers using semantic versioning. Load when deciding how to version a code change or preparing a release.
+license: MIT
+metadata:
+  author: Heiko Panjas
+  version: "1.0"
+---
+
 # Semantic Versioning Protocol
 
 Read this skill when you need to bump the project version. It explains when to
@@ -7,9 +16,9 @@ increment PATCH, MINOR, or MAJOR, and how to include the bump in a commit.
 
 ## Semantic Versioning Protocol
 
-**AUTOMATICALLY track version changes using semantic versioning (SemVer) in CMakeLists.txt.**
+**AUTOMATICALLY track version changes using semantic versioning (SemVer) in Cargo.toml.**
 
-The current version is defined in `CMakeLists.txt` under the `project()` command as `project(KString VERSION X.Y.Z LANGUAGES C)`.
+The current version is defined in `Cargo.toml` under `[package]` section as `version = "X.Y.Z"`.
 
 ### Version Format: MAJOR.MINOR.PATCH
 
@@ -24,15 +33,15 @@ The current version is defined in `CMakeLists.txt` under the `project()` command
 
 2. **MINOR version** (X.Y.Z → X.Y+1.0)
    - New features added
-   - New API functions or parameters
+   - New CLI commands or options
    - New functionality that maintains backward compatibility
    - Example: `1.0.1` → `1.1.0`
 
 3. **MAJOR version** (X.Y.Z → X+1.0.0)
    - Breaking changes to public API
-   - Removal of functions or parameters
+   - Removal of features or commands
    - Changes that require user action or code updates
-   - Incompatible API changes
+   - Incompatible CLI changes
    - Example: `1.1.0` → `2.0.0`
 
 ### Process
@@ -40,7 +49,7 @@ The current version is defined in `CMakeLists.txt` under the `project()` command
 After making ANY code changes:
 
 1. Determine the type of change (fix, feature, or breaking change)
-2. Update the version in `CMakeLists.txt` accordingly
+2. Update the version in `Cargo.toml` accordingly
 3. Include the version change in the same commit as the code change
 4. Mention version bump in commit message footer if significant
 

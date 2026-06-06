@@ -1,6 +1,6 @@
 # KString Library - Copilot Instructions
 
-**Last updated:** April 8, 2026
+**Last updated:** June 6, 2026
 
 ## Project Overview
 
@@ -17,7 +17,7 @@ KString is a high-performance C library implementing "Kraut Strings" - a special
 
 ## Project Goals
 
-- **Pure C Implementation**: This project is exclusively written in C (C17 standard). No C++ code should be added.
+- **Pure C Implementation**: This project is exclusively written in C (C23 standard). No C++ code should be added.
 - **Kraut String Implementation**: Implement the "German String" format from Umbra/CedarDB research as "Kraut Strings"
 - **128-bit Fixed Size**: All string representations fit in exactly 16 bytes for register-based function calls
 - **High Performance**: Focus on speed and memory efficiency similar to database string implementations
@@ -138,7 +138,7 @@ KString/
 
 ### Coding Standards
 
-- **C17 Standard**: Use C17 standard for broad compiler compatibility including MSVC
+- **C23 Standard**: Use C23 standard; requires GCC 14+, Clang 19+, or MSVC 19.40+
 - **Const Correctness**: All KString input parameters are const to prevent accidental modification and improve maintainability
 - **Constant-Left Comparisons**: Always place constants on the left side of comparisons (e.g., `NULL == ptr`, `0 == value`)
 - **Parameter Naming Conventions**:
@@ -197,7 +197,7 @@ The library implements "Kraut Strings" based on the "German String" format from 
 
 ### Cross-Platform Guidelines
 
-- Use standard C17 features only
+- Use standard C23 features only
 - Avoid platform-specific system calls
 - Use CMake for build configuration portability
 - Test on all target platforms regularly
@@ -646,6 +646,10 @@ After making ANY code changes:
 **Note:** Version changes should be included in the commit with the actual code changes, not as a separate commit. Load the `semantic-versioning` skill for the full PATCH/MINOR/MAJOR decision rules.
 
 ## Recent Updates & Decisions
+
+### June 6, 2026
+
+- **C standard upgraded to C23**: Raised minimum language standard from C17 to C23 across CMake global and target settings. Enables C23 features such as digit separators in numeric literals already used in KString.c. Requires modern compilers (GCC 14+, Clang 19+, MSVC 19.40+). Version bumped to 0.2.0 as a build-requirement change.
 
 ### April 8, 2026
 

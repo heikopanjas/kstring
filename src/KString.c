@@ -36,8 +36,8 @@
 //
 
 // Pointer tagging masks for storage class
-#define KSTRING_PTR_MASK     0x3FFFFFFFFFFFFFFFULL  // 62-bit pointer mask
-#define KSTRING_CLASS_MASK   0xC000000000000000ULL  // 2-bit storage class mask
+#define KSTRING_PTR_MASK     0x3FFF'FFFF'FFFF'FFFFULL  // 62-bit pointer mask
+#define KSTRING_CLASS_MASK   0xC000'0000'0000'0000ULL  // 2-bit storage class mask
 #define KSTRING_CLASS_SHIFT  62
 
 // Invalid length marker for error handling
@@ -48,9 +48,9 @@
 
 // Thread-local storage platform compatibility
 #ifdef _MSC_VER
-#define THREAD_LOCAL __declspec(thread)
+    #define THREAD_LOCAL __declspec(thread)
 #else
-#define THREAD_LOCAL __thread
+    #define THREAD_LOCAL __thread
 #endif
 
 //
@@ -190,9 +190,9 @@ KString KStringCreateWithEncoding(const char* pStr, const size_t Size, const KSt
     {
         // Long string: allocate memory and store prefix
         char* pData = KS_Alloc(Size + 1); // +1 for null terminator, zero-initialized
-        if (NULL == pData) // LCOV_EXCL_LINE
+        if (NULL == pData)                // LCOV_EXCL_LINE
         {
-            return KStringInvalid(); // LCOV_EXCL_LINE
+            return KStringInvalid();      // LCOV_EXCL_LINE
         }
 
         memcpy(pData, pStr, Size);
@@ -691,9 +691,9 @@ KString KStringConcat(const KString StrA, const KString StrB)
 
     // Allocate buffer for concatenated string
     char* pBuffer = KS_Alloc(TotalLength + 1); // Zero-initialized
-    if (NULL == pBuffer) // LCOV_EXCL_LINE
+    if (NULL == pBuffer)                       // LCOV_EXCL_LINE
     {
-        return KStringInvalid(); // LCOV_EXCL_LINE
+        return KStringInvalid();               // LCOV_EXCL_LINE
     }
 
     // Copy data from both strings
@@ -792,9 +792,9 @@ KString KStringSubstring(const KString Str, const size_t Offset, const size_t Si
     {
         // Result requires long string
         char* pBuffer = KS_Alloc(LocalSize + 1); // Zero-initialized
-        if (NULL == pBuffer) // LCOV_EXCL_LINE
+        if (NULL == pBuffer)                     // LCOV_EXCL_LINE
         {
-            return KStringInvalid(); // LCOV_EXCL_LINE
+            return KStringInvalid();             // LCOV_EXCL_LINE
         }
 
         memcpy(pBuffer, pSourceData + Offset, LocalSize);
@@ -867,7 +867,7 @@ static size_t KS_ConvertUtf8ToUtf16Le(const char* pUtf8, size_t Utf8Size, uint16
                 // Convert to surrogate pair
                 if (CodePoint > 0xFFFF && Utf16Count < MaxUtf16Size - 2)
                 {
-                    CodePoint            -= 0x10000;
+                    CodePoint            -= 0x1'0000;
                     pUtf16[Utf16Count++]  = (uint16_t)(0xD800 + (CodePoint >> 10));
                     pUtf16[Utf16Count++]  = (uint16_t)(0xDC00 + (CodePoint & 0x3FF));
                 }
@@ -916,7 +916,7 @@ static size_t KS_ConvertUtf16LeToUtf8(const uint16_t* pUtf16, size_t Utf16Size, 
             uint32_t LowSurrogate = pUtf16[i + 1];
             if (LowSurrogate >= 0xDC00 && LowSurrogate <= 0xDFFF)
             {
-                CodePoint  = 0x10000 + ((CodePoint - 0xD800) << 10) + (LowSurrogate - 0xDC00);
+                CodePoint  = 0x1'0000 + ((CodePoint - 0xD800) << 10) + (LowSurrogate - 0xDC00);
                 i         += 2;
             }
             else
@@ -940,13 +940,13 @@ static size_t KS_ConvertUtf16LeToUtf8(const uint16_t* pUtf16, size_t Utf16Size, 
             pUtf8[Utf8Count++] = (char)(0xC0 | (CodePoint >> 6));
             pUtf8[Utf8Count++] = (char)(0x80 | (CodePoint & 0x3F));
         }
-        else if (CodePoint < 0x10000)
+        else if (CodePoint < 0x1'0000)
         {
             pUtf8[Utf8Count++] = (char)(0xE0 | (CodePoint >> 12));
             pUtf8[Utf8Count++] = (char)(0x80 | ((CodePoint >> 6) & 0x3F));
             pUtf8[Utf8Count++] = (char)(0x80 | (CodePoint & 0x3F));
         }
-        else if (CodePoint < 0x110000)
+        else if (CodePoint < 0x11'0000)
         {
             pUtf8[Utf8Count++] = (char)(0xF0 | (CodePoint >> 18));
             pUtf8[Utf8Count++] = (char)(0x80 | ((CodePoint >> 12) & 0x3F));
@@ -1102,7 +1102,7 @@ KString KStringConvertToEncoding(const KString Str, const KStringEncoding Target
                     KString Utf8Str = KStringConvertUtf16LeToUtf8(Str);
                     if (false == KStringIsValid(Utf8Str)) // LCOV_EXCL_LINE
                     {
-                        return KStringInvalid(); // LCOV_EXCL_LINE
+                        return KStringInvalid();          // LCOV_EXCL_LINE
                     }
                     KString AnsiStr = KStringConvertUtf8ToAnsi(Utf8Str);
                     KStringDestroy(Utf8Str);
@@ -1125,7 +1125,7 @@ KString KStringConvertToEncoding(const KString Str, const KStringEncoding Target
                     KString Utf8Str = KStringConvertUtf16BeToUtf8(Str);
                     if (false == KStringIsValid(Utf8Str)) // LCOV_EXCL_LINE
                     {
-                        return KStringInvalid(); // LCOV_EXCL_LINE
+                        return KStringInvalid();          // LCOV_EXCL_LINE
                     }
                     KString AnsiStr = KStringConvertUtf8ToAnsi(Utf8Str);
                     KStringDestroy(Utf8Str);
@@ -1146,7 +1146,7 @@ KString KStringConvertToEncoding(const KString Str, const KStringEncoding Target
                     KString Utf8Str = KStringConvertAnsiToUtf8(Str);
                     if (false == KStringIsValid(Utf8Str)) // LCOV_EXCL_LINE
                     {
-                        return KStringInvalid(); // LCOV_EXCL_LINE
+                        return KStringInvalid();          // LCOV_EXCL_LINE
                     }
                     KString Utf16LeStr = KStringConvertUtf8ToUtf16Le(Utf8Str);
                     KStringDestroy(Utf8Str);
@@ -1158,7 +1158,7 @@ KString KStringConvertToEncoding(const KString Str, const KStringEncoding Target
                     KString Utf8Str = KStringConvertAnsiToUtf8(Str);
                     if (false == KStringIsValid(Utf8Str)) // LCOV_EXCL_LINE
                     {
-                        return KStringInvalid(); // LCOV_EXCL_LINE
+                        return KStringInvalid();          // LCOV_EXCL_LINE
                     }
                     KString Utf16BeStr = KStringConvertUtf8ToUtf16Be(Utf8Str);
                     KStringDestroy(Utf8Str);
@@ -1187,7 +1187,7 @@ KString KStringConvertUtf8ToUtf16Le(const KString Str)
     // Estimate UTF-16 size (worst case: each UTF-8 byte becomes a UTF-16 character)
     size_t    MaxUtf16Count = Utf8Size;
     uint16_t* pUtf16Buffer  = (uint16_t*)KS_Alloc((MaxUtf16Count + 1) * sizeof(uint16_t));
-    if (NULL == pUtf16Buffer) // LCOV_EXCL_LINE
+    if (NULL == pUtf16Buffer)    // LCOV_EXCL_LINE
     {
         return KStringInvalid(); // LCOV_EXCL_LINE
     }
@@ -1213,7 +1213,7 @@ KString KStringConvertUtf16LeToUtf8(const KString Str)
     // Estimate UTF-8 size (worst case: each UTF-16 character becomes 4 UTF-8 bytes)
     size_t MaxUtf8Size = Utf16Size * 4;
     char*  pUtf8Buffer = KS_Alloc(MaxUtf8Size + 1);
-    if (NULL == pUtf8Buffer) // LCOV_EXCL_LINE
+    if (NULL == pUtf8Buffer)     // LCOV_EXCL_LINE
     {
         return KStringInvalid(); // LCOV_EXCL_LINE
     }
@@ -1233,7 +1233,7 @@ KString KStringConvertUtf8ToUtf16Be(const KString Str)
     KString Utf16LeStr = KStringConvertUtf8ToUtf16Le(Str);
     if (false == KStringIsValid(Utf16LeStr)) // LCOV_EXCL_LINE
     {
-        return KStringInvalid(); // LCOV_EXCL_LINE
+        return KStringInvalid();             // LCOV_EXCL_LINE
     }
 
     return KStringConvertUtf16LeToUtf16Be(Utf16LeStr);
@@ -1245,7 +1245,7 @@ KString KStringConvertUtf16BeToUtf8(const KString Str)
     KString Utf16LeStr = KStringConvertUtf16BeToUtf16Le(Str);
     if (false == KStringIsValid(Utf16LeStr)) // LCOV_EXCL_LINE
     {
-        return KStringInvalid(); // LCOV_EXCL_LINE
+        return KStringInvalid();             // LCOV_EXCL_LINE
     }
 
     KString Result = KStringConvertUtf16LeToUtf8(Utf16LeStr);
@@ -1266,9 +1266,9 @@ KString KStringConvertUtf16LeToUtf16Be(const KString Str)
     const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
     char* pSwappedData = KS_Alloc(DataSize + 2); // +2 for potential null terminator
-    if (NULL == pSwappedData) // LCOV_EXCL_LINE
+    if (NULL == pSwappedData)                    // LCOV_EXCL_LINE
     {
-        return KStringInvalid(); // LCOV_EXCL_LINE
+        return KStringInvalid();                 // LCOV_EXCL_LINE
     }
 
     // Swap bytes for UTF-16 byte order conversion
@@ -1295,9 +1295,9 @@ KString KStringConvertUtf16BeToUtf16Le(const KString Str)
     const char* pSourceData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
     char* pSwappedData = KS_Alloc(DataSize + 2); // +2 for potential null terminator
-    if (NULL == pSwappedData) // LCOV_EXCL_LINE
+    if (NULL == pSwappedData)                    // LCOV_EXCL_LINE
     {
-        return KStringInvalid(); // LCOV_EXCL_LINE
+        return KStringInvalid();                 // LCOV_EXCL_LINE
     }
 
     // Swap bytes for UTF-16 byte order conversion
@@ -1325,9 +1325,9 @@ KString KStringConvertUtf8ToAnsi(const KString Str)
     const char* pUtf8Data = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
     char* pAnsiBuffer = KS_Alloc(Utf8Size + 1); // ANSI is typically smaller than UTF-8
-    if (NULL == pAnsiBuffer) // LCOV_EXCL_LINE
+    if (NULL == pAnsiBuffer)                    // LCOV_EXCL_LINE
     {
-        return KStringInvalid(); // LCOV_EXCL_LINE
+        return KStringInvalid();                // LCOV_EXCL_LINE
     }
 
     size_t AnsiCount = KS_ConvertUtf8ToAnsi(pUtf8Data, Utf8Size, pAnsiBuffer, Utf8Size + 1);
@@ -1349,9 +1349,9 @@ KString KStringConvertAnsiToUtf8(const KString Str)
     const char* pAnsiData = (true == KStringIsShort(Str)) ? Str.Content : (const char*)KS_GetPointer(Str.LongStr.PtrAndClass);
 
     char* pUtf8Buffer = KS_Alloc(AnsiSize * 3 + 1); // UTF-8 can be up to 3x larger
-    if (NULL == pUtf8Buffer) // LCOV_EXCL_LINE
+    if (NULL == pUtf8Buffer)                        // LCOV_EXCL_LINE
     {
-        return KStringInvalid(); // LCOV_EXCL_LINE
+        return KStringInvalid();                    // LCOV_EXCL_LINE
     }
 
     size_t Utf8Count = KS_ConvertAnsiToUtf8(pAnsiData, AnsiSize, pUtf8Buffer, AnsiSize * 3 + 1);

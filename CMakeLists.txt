@@ -25,14 +25,17 @@
 cmake_minimum_required(VERSION 3.30)
 
 # Project name and version
-project(KString VERSION 0.1.0 LANGUAGES C)
+project(KString VERSION 0.2.0 LANGUAGES C)
+
+# Export compile_commands.json for IDE/clangd integration
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Use standard installation directories
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 # Set C standard
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Add compiler flags for better error checking
@@ -64,7 +67,7 @@ add_library(KString::kstring ALIAS kstring)
 set_target_properties(kstring PROPERTIES
     VERSION ${PROJECT_VERSION}
     PUBLIC_HEADER "${KSTRING_HEADERS}"
-    C_STANDARD 17
+    C_STANDARD 23
     C_STANDARD_REQUIRED ON
 )
 
